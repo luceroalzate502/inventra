@@ -31,10 +31,6 @@ Aplicación genérica de inventarios: configure el nombre de su empresa, NIT y d
 | Perfil | Correo | Contraseña |
 | --- | --- | --- |
 | Administrador | `lucero.alzate502@asys.edu.co` | `1001415502` |
-| Jefe de inventarios | `jefe@inventra.co` | `jefe123` |
-| Almacenista | `almacen@inventra.co` | `almacen123` |
-| Producción | `produccion@inventra.co` | `produccion123` |
-| Consulta | `consulta@inventra.co` | `consulta123` |
 
 La aplicación arranca **sin datos operativos**: no hay productos, movimientos, BOM, órdenes de producción ni conteos precargados. Solo se crean la configuración inicial y las cuentas de acceso. Empiece creando sus productos y registrando entradas.
 
