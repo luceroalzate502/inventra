@@ -103,7 +103,7 @@ Para otros hosts (Vercel, Netlify, Cloudflare Pages, hosting propio) use `npm ru
 
 > **Datos por dispositivo:** la información se guarda en IndexedDB dentro de cada navegador. Publicar la app permite abrirla desde cualquier teléfono, tablet o computador, pero **cada dispositivo tiene su propia base local**. Para compartir información entre varios equipos, conecte la nube desde **Administración → Nube y sincronización** (ver la sección siguiente).
 >
-> Antes de publicar, cambie la contraseña de la cuenta administradora y desactive o ajuste las cuentas de demostración (`jefe@inventra.co`, `almacen@inventra.co`, `produccion@inventra.co`, `consulta@inventra.co`) desde **Usuarios y roles**.
+> Antes de publicar, cambie la contraseña de la cuenta administradora desde **Usuarios y roles**.
 
 ## Sincronización entre equipos (Supabase)
 
