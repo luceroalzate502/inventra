@@ -80,6 +80,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('inventra.theme', theme);
   }, [theme]);
 
+  // Si otra sincronización trajo una configuración nueva, se refleja sin recargar.
+  useEffect(() => {
+    const onRemote = () => {
+      void reloadSettings();
+    };
+    window.addEventListener('inventra:remote-applied', onRemote);
+    return () => window.removeEventListener('inventra:remote-applied', onRemote);
+  }, [reloadSettings]);
+
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);

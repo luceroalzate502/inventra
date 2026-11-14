@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Building2,
   Clock,
+  Cloud,
   Database,
   Download,
   HardDrive,
@@ -14,10 +15,13 @@ import {
   Sun,
   Upload,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { dateTime, uid } from '../domain/format';
 import { recalculateStock } from '../domain/movements';
+import { resetSyncTracking } from '../sync/engine';
+import { useSyncStatus } from '../sync/useSync';
 import type { Settings as AppSettings } from '../domain/types';
 import {
   Badge,
@@ -47,6 +51,13 @@ const TABLES = [
   'settings',
   'counters',
   'outbox',
+  'machines',
+  'productionRecords',
+  'pnc',
+  'locations',
+  'locationStock',
+  'transfers',
+  'dispatches',
 ] as const;
 
 interface SettingsForm {
@@ -90,7 +101,8 @@ export function Settings() {
   const productCount = useLiveQuery(() => db.products.count(), []) ?? 0;
   const movementCount = useLiveQuery(() => db.movements.count(), []) ?? 0;
   const userCount = useLiveQuery(() => db.users.count(), []) ?? 0;
-  const pendingSync = useLiveQuery(() => db.outbox.where('synced').equals(0).count(), []) ?? 0;
+  const sync = useSyncStatus();
+  const pendingSync = sync.pending;
 
   useEffect(() => {
     if (!settings) return;
@@ -230,6 +242,7 @@ export function Settings() {
         }
       });
       await reloadSettings();
+      await resetSyncTracking();
       const stillThere = await db.users.get(user.id);
       await db.audit.add({
         id: uid(),
@@ -296,7 +309,15 @@ export function Settings() {
           value={pendingSync}
           icon={<HardDrive size={18} />}
           tone={pendingSync > 0 ? 'warn' : 'muted'}
-          foot={<span>{pendingSync > 0 ? 'pendientes en cola' : 'todo al día'}</span>}
+          foot={
+            <span>
+              {sync.connected
+                ? pendingSync > 0
+                  ? 'pendientes de subir a la nube'
+                  : 'todo al día con la nube'
+                : 'solo en este equipo'}
+            </span>
+          }
         />
       </div>
 
@@ -421,10 +442,18 @@ export function Settings() {
               <Badge tone="info" dot>
                 Funciona sin conexión
               </Badge>
-              <Badge tone="muted" dot>
-                Datos locales
+              <Badge tone={sync.connected ? 'ok' : 'muted'} dot>
+                {sync.connected ? 'Nube conectada' : 'Datos locales'}
               </Badge>
             </div>
+            <Link
+              to="/sincronizacion"
+              className="btn btn-ghost"
+              style={{ justifySelf: 'start' }}
+            >
+              <Cloud size={15} />
+              {sync.connected ? 'Ver estado de la nube' : 'Compartir datos entre equipos'}
+            </Link>
           </div>
         </Card>
 

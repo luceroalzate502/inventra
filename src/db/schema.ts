@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
+import { deviceSuffix, isCloudConfigured } from '../sync/config';
 import type {
   AuditEntry,
   Bom,
@@ -18,6 +19,7 @@ import type {
   ProductionOrder,
   ProductionRecord,
   Settings,
+  SyncMeta,
   Transfer,
   User,
   WarehouseLocation,
@@ -44,6 +46,7 @@ export class InventraDB extends Dexie {
   locationStock!: Table<LocationStock, string>;
   transfers!: Table<Transfer, string>;
   dispatches!: Table<Dispatch, string>;
+  syncMeta!: Table<SyncMeta, string>;
 
   constructor() {
     super('inventra');
@@ -73,6 +76,11 @@ export class InventraDB extends Dexie {
       transfers: 'id, code, productId, fromLocationId, toLocationId, createdAt',
       dispatches: 'id, code, status, customer, date, createdAt',
     });
+
+    // v3: seguimiento local de cambios para sincronización multidispositivo.
+    this.version(3).stores({
+      syncMeta: 'key, table, dirty, updatedAt',
+    });
   }
 }
 
@@ -83,5 +91,8 @@ export async function nextCode(prefix: string, pad = 5): Promise<string> {
   const current = await db.counters.get(prefix);
   const value = (current?.value ?? 0) + 1;
   await db.counters.put({ prefix, value });
-  return `${prefix}-${String(value).padStart(pad, '0')}`;
+  // Con nube, cada equipo agrega su sufijo para que dos dispositivos offline
+  // no generen el mismo código legible.
+  const suffix = isCloudConfigured() ? `-${deviceSuffix()}` : '';
+  return `${prefix}-${String(value).padStart(pad, '0')}${suffix}`;
 }

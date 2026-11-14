@@ -25,6 +25,7 @@ Aplicación genérica de inventarios: configure el nombre de su empresa, NIT y d
 - Usuarios, roles, matriz de permisos y bloqueo por intentos fallidos.
 - Auditoría inmutable de operaciones, accesos y cambios.
 - Respaldo y restauración completa en JSON.
+- Sincronización multidispositivo con Supabase, con funcionamiento offline y resolución de conflictos por última escritura.
 
 ## Cuentas de acceso
 
@@ -63,6 +64,7 @@ src/
   db/           Esquema Dexie y seed base (configuración + cuentas)
   domain/       Reglas de negocio: movimientos, producción, BOM/MRP, almacén 5S, despachos, PNC/Kaizen, indicadores, Excel, permisos
   pages/        Vistas de cada módulo
+  sync/         Sincronización con Supabase: configuración, motor y estado
   styles/       Sistema de diseño responsive con modo claro/oscuro
 docs/           Arquitectura, modelo de datos, navegación, flujos operativos y módulos de planta
 ```
@@ -99,9 +101,61 @@ El workflow calcula la ruta base (`/inventra/`) automáticamente, ajusta el mani
 
 Para otros hosts (Vercel, Netlify, Cloudflare Pages, hosting propio) use `npm run build` y publique la carpeta `dist/` en la raíz del dominio.
 
-> **Datos por dispositivo:** la información se guarda en IndexedDB dentro de cada navegador. Publicar la app permite abrirla desde cualquier teléfono, tablet o computador, pero **cada dispositivo tiene su propia base local** y los datos no se comparten entre dispositivos. Para compartir información entre varios equipos se requiere conectar el backend/ERP mediante la capa `sync/` (pendiente).
+> **Datos por dispositivo:** la información se guarda en IndexedDB dentro de cada navegador. Publicar la app permite abrirla desde cualquier teléfono, tablet o computador, pero **cada dispositivo tiene su propia base local**. Para compartir información entre varios equipos, conecte la nube desde **Administración → Nube y sincronización** (ver la sección siguiente).
 >
 > Antes de publicar, cambie la contraseña de la cuenta administradora y desactive o ajuste las cuentas de demostración (`jefe@inventra.co`, `almacen@inventra.co`, `produccion@inventra.co`, `consulta@inventra.co`) desde **Usuarios y roles**.
+
+## Sincronización entre equipos (Supabase)
+
+La app sigue siendo **offline-first**: cada dispositivo escribe primero en IndexedDB y la nube se actualiza en segundo plano. Sin internet se puede seguir operando; los cambios se envían al recuperar la conexión.
+
+### 1. Crear el proyecto en Supabase
+
+1. Cree una cuenta y un proyecto gratuito en [supabase.com](https://supabase.com).
+2. En **SQL Editor**, pegue y ejecute el script [`public/supabase-schema.sql`](public/supabase-schema.sql). También puede copiarlo o descargarlo desde la pantalla **Nube y sincronización**.
+3. En **Project Settings → API** copie el **Project URL** y la **anon public key**.
+4. En **Authentication → Providers → Email**, si no quiere confirmar correos, desactive **Confirm email**.
+
+### 2. Conectar cada dispositivo
+
+1. Abra **Administración → Nube y sincronización**.
+2. Complete la URL, la llave anónima y una cuenta de nube (correo y contraseña de mínimo 6 caracteres). Si la cuenta no existe, la app la crea automáticamente.
+3. Elija el modo inicial:
+   - **Automático**: sube si el servidor está vacío; descarga si el servidor ya tiene datos.
+   - **Descargar del servidor**: reemplaza los datos locales por los de la nube.
+   - **Subir este equipo**: envía todo el contenido local y combina con lo existente.
+   - **Combinar cambios**: sube y baja; en conflictos gana la edición más reciente.
+4. Repita la conexión en los demás equipos con la **misma cuenta de nube**.
+
+### Cómo funciona
+
+- La tabla `public.inventra_records` guarda cada registro como JSON, identificado por `(table_name, record_id)`.
+- La app usa Supabase Auth para proteger la tabla con RLS: solo usuarios autenticados del proyecto acceden.
+- Se sincronizan usuarios (incluidos roles y hashes PBKDF2 de las contraseñas), configuración, productos, movimientos, lotes, BOM, producción, PNC, ubicaciones, traslados, despachos, conteos y auditoría.
+- No se sincronizan los contadores locales ni el `outbox` heredado. Con la nube activa, los códigos generados agregan un sufijo del dispositivo para evitar colisiones sin conexión.
+- Los campos volátiles del usuario (`lastLoginAt`, `failedAttempts`, `lockedUntil`) son propios de cada equipo y no viajan.
+- Los conflictos se resuelven por **última escritura gana**, usando la marca de tiempo del dispositivo y su ID como desempate. En campos únicos (`users.email`, `products.sku`, `locations.code`, `machines.code`) el registro remoto tiene prioridad.
+- El servidor también descarta escrituras cuya marca de tiempo sea más antigua que la copia central, para que un equipo desactualizado no sobrescriba cambios recientes. Mantenga la fecha y hora de los equipos sincronizadas.
+- Al recibir movimientos de otro equipo, el stock de cada producto y el stock por ubicación se recalculan desde el historial local de movimientos. Así las existencias no dependen de valores derivados que viajen desactualizados.
+- La sincronización se dispara al guardar cambios, al recuperar conexión, al enfocar la ventana y cada 30 segundos.
+- La contraseña de la nube no se guarda en el equipo: Supabase conserva una sesión renovable.
+
+### Seguridad
+
+- La **anon key** es pública por diseño; la protección real la da la cuenta autenticada y las políticas RLS.
+- Cualquier persona con la URL del proyecto y la anon key puede crear una cuenta si la confirmación de correo está desactivada. Para un entorno real, restrinja el registro o use cuentas creadas previamente desde Supabase.
+- Los hashes PBKDF2 de los usuarios viajan entre equipos para que las credenciales funcionen en todos. Proteja la cuenta de nube y la base central.
+- Use HTTPS en producción. La app acepta `http://localhost` solo para desarrollo.
+
+### Problemas frecuentes
+
+| Síntoma | Solución |
+| --- | --- |
+| «La tabla inventra_records no existe» | Ejecute `public/supabase-schema.sql` en el SQL Editor. |
+| «Correo o contraseña de la nube incorrectos» | Revise la cuenta; si la creó antes, use la misma contraseña. |
+| Supabase exige confirmar el correo | Confirme el enlace o desactive **Confirm email**. |
+| La sesión de la nube expiró | Vuelva a conectar el dispositivo desde **Nube y sincronización**. |
+| Un equipo no ve los cambios | Pulse **Sincronizar ahora**; revise el indicador de la nube en la barra superior. |
 
 ## Reiniciar la aplicación
 

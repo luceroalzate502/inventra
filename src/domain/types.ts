@@ -574,6 +574,24 @@ export interface OutboxEvent {
   synced: 0 | 1;
 }
 
+/**
+ * Metadatos locales de sincronización. No se envían como parte del registro:
+ * solo indican qué cambió, cuándo y si está pendiente de subir a la nube.
+ */
+export interface SyncMeta {
+  /** `${tabla}|${id}` */
+  key: string;
+  table: string;
+  recordId: string;
+  /** Marca de tiempo del dispositivo que originó el cambio. */
+  updatedAt: string;
+  deleted: 0 | 1;
+  dirty: 0 | 1;
+  deviceId: string;
+  /** Última marca de tiempo del servidor, para diagnóstico. */
+  serverUpdatedAt?: string;
+}
+
 export interface SessionUser {
   id: string;
   name: string;

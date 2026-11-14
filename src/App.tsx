@@ -35,6 +35,7 @@ import { Users } from './pages/Users';
 import { Audit } from './pages/Audit';
 import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
+import { CloudPage } from './pages/Cloud';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -121,6 +122,7 @@ export function App() {
           <Route path="usuarios" element={guard('users.manage', <Users />)} />
           <Route path="auditoria" element={guard('audit.view', <Audit />)} />
           <Route path="configuracion" element={guard('settings.manage', <Settings />)} />
+          <Route path="sincronizacion" element={guard('settings.manage', <CloudPage />)} />
           <Route path="perfil" element={<Profile />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

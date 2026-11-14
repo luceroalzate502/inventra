@@ -10,6 +10,7 @@ import {
   Boxes,
   ClipboardCheck,
   ClipboardList,
+  Cloud,
   Factory,
   FileSpreadsheet,
   Gauge,
@@ -41,6 +42,7 @@ import { ROLES } from '../domain/types';
 import type { Permission } from '../domain/permissions';
 import { Badge, Button, Modal, cx } from './ui';
 import { Scanner } from './Scanner';
+import { useSyncStatus } from '../sync/useSync';
 
 interface NavItem {
   to: string;
@@ -89,6 +91,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/datos', label: 'Importar / exportar', icon: FileSpreadsheet, perm: 'data.import' },
       { to: '/usuarios', label: 'Usuarios', icon: Users, perm: 'users.manage' },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheck, perm: 'audit.view' },
+      { to: '/sincronizacion', label: 'Nube y sincronización', icon: Cloud, perm: 'settings.manage' },
       { to: '/configuracion', label: 'Configuración', icon: Settings, perm: 'settings.manage' },
     ],
   },
@@ -117,6 +120,7 @@ const TITLES: { path: string; title: string; crumb: string }[] = [
   { path: '/usuarios', title: 'Usuarios y roles', crumb: 'Administración' },
   { path: '/auditoria', title: 'Auditoría', crumb: 'Administración' },
   { path: '/configuracion', title: 'Configuración', crumb: 'Administración' },
+  { path: '/sincronizacion', title: 'Nube y sincronización', crumb: 'Datos compartidos entre equipos' },
   { path: '/perfil', title: 'Mi perfil', crumb: 'Cuenta y seguridad' },
 ];
 
@@ -131,7 +135,8 @@ export function Layout() {
 
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const movements = useLiveQuery(() => db.movements.toArray(), []) ?? [];
-  const pending = useLiveQuery(() => db.outbox.where('synced').equals(0).count(), []) ?? 0;
+  const sync = useSyncStatus();
+  const pending = sync.pending;
 
   const alertCount = useMemo(
     () => alertsFor(products, movements).filter((a) => a.severity === 'agotado' || a.severity === 'critico' || a.severity === 'bajo').length,
@@ -243,6 +248,34 @@ export function Layout() {
               <Badge tone="warn">
                 <WifiOff size={12} /> Sin conexión
               </Badge>
+            )}
+            {sync.connected && (
+              <button
+                className="icon-btn"
+                onClick={() => navigate('/sincronizacion')}
+                aria-label="Estado de sincronización"
+                title={
+                  sync.state === 'syncing'
+                    ? 'Sincronizando con la nube…'
+                    : sync.state === 'error'
+                      ? `Error de sincronización: ${sync.lastError ?? 'revise la conexión'}`
+                      : pending > 0
+                        ? `${pending} cambio(s) pendientes de subir`
+                        : 'Todo sincronizado con la nube'
+                }
+              >
+                <Cloud
+                  size={17}
+                  color={
+                    sync.state === 'error'
+                      ? 'var(--danger)'
+                      : pending > 0
+                        ? 'var(--warn)'
+                        : 'var(--ok)'
+                  }
+                />
+                {(pending > 0 || sync.state === 'error') && <span className="dot" />}
+              </button>
             )}
             <button className="icon-btn" onClick={toggleTheme} aria-label="Cambiar tema" title="Cambiar tema">
               {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
@@ -381,7 +414,11 @@ export function Layout() {
         </div>
         <div className="row-between" style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
           <div className="small muted">
-            {pending > 0 ? `${pending} operación(es) pendientes de sincronizar` : 'Todo sincronizado'}
+            {!sync.connected
+              ? 'Los datos viven solo en este equipo'
+              : pending > 0
+                ? `${pending} cambio(s) pendientes de subir a la nube`
+                : 'Todo sincronizado con la nube'}
           </div>
           <Button
             variant="ghost"
