@@ -67,8 +67,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const session = readSession();
       if (session) {
         const stored = await db.users.get(session.user.id);
-        if (stored?.active) setUser(session.user);
-        else clearSession();
+        if (stored?.active) {
+          setUser(session.user);
+        } else {
+          // La sincronización pudo reemplazar el registro local por el mismo
+          // correo con otro ID; se recupera la sesión por correo.
+          const byEmail = await db.users.where('email').equals(session.user.email.toLowerCase()).first();
+          if (byEmail?.active) {
+            const remapped: SessionUser = {
+              id: byEmail.id,
+              name: byEmail.name,
+              email: byEmail.email,
+              role: byEmail.role,
+            };
+            saveSession(remapped, s?.sessionMinutes ?? 60);
+            setUser(remapped);
+          } else {
+            clearSession();
+          }
+        }
       }
       setReady(true);
     })();
@@ -84,10 +101,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onRemote = () => {
       void reloadSettings();
+      // Si el usuario local fue reemplazado por el mismo correo desde la nube,
+      // la sesión se mantiene apuntando al nuevo registro.
+      void (async () => {
+        const session = readSession();
+        if (!session) return;
+        const stored = await db.users.get(session.user.id);
+        if (stored) return;
+        const byEmail = await db.users.where('email').equals(session.user.email.toLowerCase()).first();
+        if (byEmail?.active) {
+          const remapped: SessionUser = {
+            id: byEmail.id,
+            name: byEmail.name,
+            email: byEmail.email,
+            role: byEmail.role,
+          };
+          saveSession(remapped, settings?.sessionMinutes ?? 60);
+          setUser(remapped);
+        } else {
+          clearSession();
+          setUser(null);
+        }
+      })();
     };
     window.addEventListener('inventra:remote-applied', onRemote);
     return () => window.removeEventListener('inventra:remote-applied', onRemote);
-  }, [reloadSettings]);
+  }, [reloadSettings, settings]);
 
   useEffect(() => {
     const on = () => setOnline(true);

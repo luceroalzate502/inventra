@@ -109,7 +109,11 @@ Para otros hosts (Vercel, Netlify, Cloudflare Pages, hosting propio) use `npm ru
 
 La app sigue siendo **offline-first**: cada dispositivo escribe primero en IndexedDB y la nube se actualiza en segundo plano. Sin internet se puede seguir operando; los cambios se envían al recuperar la conexión.
 
-### 1. Crear el proyecto en Supabase
+### 1. Proyecto de Supabase
+
+Esta instalación ya tiene un proyecto central creado, el script aplicado y la URL y la llave anónima prellenadas en la pantalla de conexión. Solo necesita la cuenta de nube.
+
+Si va a crear una instalación nueva para otra empresa:
 
 1. Cree una cuenta y un proyecto gratuito en [supabase.com](https://supabase.com).
 2. En **SQL Editor**, pegue y ejecute el script [`public/supabase-schema.sql`](public/supabase-schema.sql). También puede copiarlo o descargarlo desde la pantalla **Nube y sincronización**.
@@ -119,7 +123,7 @@ La app sigue siendo **offline-first**: cada dispositivo escribe primero en Index
 ### 2. Conectar cada dispositivo
 
 1. Abra **Administración → Nube y sincronización**.
-2. Complete la URL, la llave anónima y una cuenta de nube (correo y contraseña de mínimo 6 caracteres). Si la cuenta no existe, la app la crea automáticamente.
+2. La URL y la llave anónima ya vienen completas. Escriba el correo y la contraseña de la cuenta de nube (mínimo 6 caracteres). En una instalación nueva la app crea la cuenta; en esta instalación el registro está cerrado, así que use la cuenta ya creada.
 3. Elija el modo inicial:
    - **Automático**: sube si el servidor está vacío; descarga si el servidor ya tiene datos.
    - **Descargar del servidor**: reemplaza los datos locales por los de la nube.
@@ -143,7 +147,7 @@ La app sigue siendo **offline-first**: cada dispositivo escribe primero en Index
 ### Seguridad
 
 - La **anon key** es pública por diseño; la protección real la da la cuenta autenticada y las políticas RLS.
-- Cualquier persona con la URL del proyecto y la anon key puede crear una cuenta si la confirmación de correo está desactivada. Para un entorno real, restrinja el registro o use cuentas creadas previamente desde Supabase.
+- En esta instalación el registro de nuevas cuentas está desactivado: solo la cuenta de nube creada puede acceder a los datos. Si habilita el registro, cualquier persona con la URL y la anon key podría crear una cuenta; vuelva a desactivarlo al terminar.
 - Los hashes PBKDF2 de los usuarios viajan entre equipos para que las credenciales funcionen en todos. Proteja la cuenta de nube y la base central.
 - Use HTTPS en producción. La app acepta `http://localhost` solo para desarrollo.
 
@@ -153,6 +157,7 @@ La app sigue siendo **offline-first**: cada dispositivo escribe primero en Index
 | --- | --- |
 | «La tabla inventra_records no existe» | Ejecute `public/supabase-schema.sql` en el SQL Editor. |
 | «Correo o contraseña de la nube incorrectos» | Revise la cuenta; si la creó antes, use la misma contraseña. |
+| «La cuenta de nube no existe o la contraseña es incorrecta» | Use la cuenta ya creada; el registro de cuentas nuevas está desactivado. |
 | Supabase exige confirmar el correo | Confirme el enlace o desactive **Confirm email**. |
 | La sesión de la nube expiró | Vuelva a conectar el dispositivo desde **Nube y sincronización**. |
 | Un equipo no ve los cambios | Pulse **Sincronizar ahora**; revise el indicador de la nube en la barra superior. |

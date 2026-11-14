@@ -761,6 +761,9 @@ function authErrorMessage(message: string): string {
     return 'La cuenta de la nube aún no confirma el correo. Confírmelo desde el panel de Supabase o desactive la confirmación por correo.';
   }
   if (lower.includes('user already registered')) return 'La cuenta ya existe; revise la contraseña de la nube.';
+  if (lower.includes('signups not allowed') || lower.includes('signup is disabled')) {
+    return 'La cuenta de nube no existe o la contraseña es incorrecta.';
+  }
   if (lower.includes('password')) return 'La contraseña de la nube no cumple los requisitos (mínimo 6 caracteres).';
   return message;
 }

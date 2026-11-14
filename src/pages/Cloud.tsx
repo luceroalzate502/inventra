@@ -31,7 +31,13 @@ import {
   syncNow,
 } from '../sync/engine';
 import type { InitialMode } from '../sync/engine';
-import { deviceId, deviceSuffix, getCloudConfig } from '../sync/config';
+import {
+  DEFAULT_CLOUD_ANON_KEY,
+  DEFAULT_CLOUD_URL,
+  deviceId,
+  deviceSuffix,
+  getCloudConfig,
+} from '../sync/config';
 import type { CloudConfig } from '../sync/config';
 import {
   Badge,
@@ -53,7 +59,12 @@ interface CloudForm {
   password: string;
 }
 
-const EMPTY_FORM: CloudForm = { url: '', anonKey: '', email: '', password: '' };
+const EMPTY_FORM: CloudForm = {
+  url: DEFAULT_CLOUD_URL,
+  anonKey: DEFAULT_CLOUD_ANON_KEY,
+  email: '',
+  password: '',
+};
 
 const MODE_OPTIONS: { value: InitialMode; label: string; hint: string }[] = [
   {
@@ -156,7 +167,9 @@ export function CloudPage() {
         toast('Conexión establecida con advertencias', 'warn', result.error ?? 'Revise el estado de la nube.');
       }
       if (user) {
-        const stillThere = await db.users.get(user.id);
+        const stillThere =
+          (await db.users.get(user.id)) ??
+          (await db.users.where('email').equals(user.email.toLowerCase()).first());
         if (!stillThere) {
           toast('Su usuario no está en la nube', 'warn', 'Inicie sesión con una cuenta del servidor.');
           logout();
@@ -232,7 +245,9 @@ export function CloudPage() {
         result.ok ? `${result.pulled} registro(s) recibidos.` : (result.error ?? 'Intente nuevamente.'),
       );
       if (result.ok && user) {
-        const stillThere = await db.users.get(user.id);
+        const stillThere =
+          (await db.users.get(user.id)) ??
+          (await db.users.where('email').equals(user.email.toLowerCase()).first());
         if (!stillThere) {
           toast('Su usuario no está en la nube', 'warn', 'Inicie sesión con una cuenta del servidor.');
           logout();
