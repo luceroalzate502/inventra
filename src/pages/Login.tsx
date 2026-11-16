@@ -67,7 +67,7 @@ export function Login() {
             <Boxes size={22} />
           </div>
           <div>
-            <div className="brand-name">INVENTRA</div>
+            <div className="brand-name">Invencodi</div>
             <div className="brand-sub">Gestión integral de inventarios</div>
           </div>
         </div>
@@ -104,7 +104,7 @@ export function Login() {
         </div>
 
         <div className="login-legal">
-          © 2026 INVENTRA · Datos almacenados localmente en el dispositivo
+          © 2026 Invencodi · Datos almacenados localmente en el dispositivo
         </div>
       </section>
 

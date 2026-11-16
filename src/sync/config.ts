@@ -20,7 +20,7 @@ const LAST_SYNC_KEY = 'inventra.sync.last';
 const RECONCILED_KEY = 'inventra.sync.reconciled.v3';
 
 /**
- * Proyecto Supabase compartido de INVENTRA. La URL y la llave anónima son
+ * Proyecto Supabase compartido de Invencodi. La URL y la llave anónima son
  * públicas por diseño y solo sirven para prellenar la conexión en equipos
  * nuevos; el acceso a los datos lo protege la cuenta de nube y RLS.
  */

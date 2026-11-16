@@ -210,7 +210,7 @@ export function Indicators() {
       filename: `indicadores-planta-${from}-${to}`,
       title: 'Indicadores de planta y almacén',
       subtitle: `Periodo ${from} a ${to} · OEE ${pct(overall.oee)} · scrap ${pct(overall.scrapPct)}`,
-      company: settings?.companyName ?? 'INVENTRA',
+      company: settings?.companyName ?? 'Invencodi',
       user: user?.name,
       landscape: true,
       columns: ['Turno', 'Registros', 'Conformes', 'Scrap', 'Disp.', 'Rend.', 'Calidad', 'OEE', 'Scrap %'],

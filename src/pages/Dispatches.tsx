@@ -225,7 +225,7 @@ export function Dispatches() {
       filename: `remision-${selected.code}`,
       title: `Remisión ${selected.code}`,
       subtitle: `${selected.customer}${selected.orderRef ? ` · Pedido ${selected.orderRef}` : ''} · ${selected.date}`,
-      company: settings?.companyName ?? 'INVENTRA',
+      company: settings?.companyName ?? 'Invencodi',
       user: user?.name,
       columns: ['SKU', 'Producto', 'Lote', 'Cantidad', 'UOM'],
       rows: draftItems.map((item) => [

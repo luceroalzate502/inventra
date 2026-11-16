@@ -1,4 +1,4 @@
-// Tipos y catálogos de dominio — INVENTRA
+// Tipos y catálogos de dominio — Invencodi
 // Nota: se usan objetos constantes en lugar de enums (erasableSyntaxOnly).
 
 export type Role = 'admin' | 'jefe' | 'almacenista' | 'produccion' | 'consulta';

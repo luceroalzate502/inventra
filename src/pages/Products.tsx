@@ -78,7 +78,7 @@ export function Products() {
       filename: 'inventario-productos',
       title: 'Catálogo de productos',
       subtitle: `${filtered.length} registros · valorizado ${money(totalValue)}`,
-      company: settings?.companyName ?? 'INVENTRA',
+      company: settings?.companyName ?? 'Invencodi',
       user: user?.name,
       landscape: true,
       columns: ['SKU', 'Producto', 'Tipo', 'Stock', 'Mín.', 'Costo', 'Valor', 'Estado'],

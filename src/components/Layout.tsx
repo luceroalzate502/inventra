@@ -171,7 +171,7 @@ export function Layout() {
           <Boxes size={21} />
         </div>
         <div>
-          <div className="brand-name">INVENTRA</div>
+          <div className="brand-name">Invencodi</div>
           <div className="brand-sub">Gestión de inventarios</div>
         </div>
       </div>
@@ -221,7 +221,7 @@ export function Layout() {
       <div className="main">
         <header className="topbar">
           <div style={{ minWidth: 0 }}>
-            <div className="topbar-title truncate">{current?.title ?? 'INVENTRA'}</div>
+            <div className="topbar-title truncate">{current?.title ?? 'Invencodi'}</div>
             <div className="topbar-crumb">{current?.crumb ?? 'Gestión de inventarios'}</div>
           </div>
 

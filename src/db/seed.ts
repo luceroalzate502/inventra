@@ -96,10 +96,10 @@ export async function seedIfEmpty(): Promise<boolean> {
   /* --- Cuentas de acceso --- */
   const demoUsers: { name: string; email: string; role: User['role']; pin: string; phone: string }[] = [
     { name: ADMIN_NAME, email: ADMIN_EMAIL, role: 'admin', pin: ADMIN_PIN, phone: '' },
-    { name: 'Carlos Ruiz', email: 'jefe@inventra.co', role: 'jefe', pin: 'jefe123', phone: '+57 310 555 0102' },
-    { name: 'Marta Díaz', email: 'almacen@inventra.co', role: 'almacenista', pin: 'almacen123', phone: '+57 310 555 0103' },
-    { name: 'Julián Pérez', email: 'produccion@inventra.co', role: 'produccion', pin: 'produccion123', phone: '+57 310 555 0104' },
-    { name: 'Laura Sánchez', email: 'consulta@inventra.co', role: 'consulta', pin: 'consulta123', phone: '+57 310 555 0105' },
+    { name: 'Carlos Ruiz', email: 'jefe@invencodi.co', role: 'jefe', pin: 'jefe123', phone: '+57 310 555 0102' },
+    { name: 'Marta Díaz', email: 'almacen@invencodi.co', role: 'almacenista', pin: 'almacen123', phone: '+57 310 555 0103' },
+    { name: 'Julián Pérez', email: 'produccion@invencodi.co', role: 'produccion', pin: 'produccion123', phone: '+57 310 555 0104' },
+    { name: 'Laura Sánchez', email: 'consulta@invencodi.co', role: 'consulta', pin: 'consulta123', phone: '+57 310 555 0105' },
   ];
 
   const now = new Date().toISOString();

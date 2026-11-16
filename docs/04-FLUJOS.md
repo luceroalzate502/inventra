@@ -1,4 +1,4 @@
-# INVENTRA — Flujos operativos
+# Invencodi — Flujos operativos
 
 ## F1. Entrada por compra
 1. Almacenista → **Entradas → Compra**.

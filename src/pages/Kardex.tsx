@@ -100,7 +100,7 @@ export function Kardex() {
       filename: `kardex-${product.sku}`,
       title: `Kardex · ${product.name}`,
       subtitle: `${product.sku} · saldo actual ${fmtQty(product.stock)} ${product.uom}`,
-      company: settings?.companyName ?? 'INVENTRA',
+      company: settings?.companyName ?? 'Invencodi',
       user: user?.name,
       landscape: true,
       columns: ['Fecha', 'Código', 'Tipo', 'Motivo', 'Entrada', 'Salida', 'Saldo', 'Valor'],

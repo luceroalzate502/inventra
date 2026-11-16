@@ -62,7 +62,7 @@ function Protected({ children, perm }: { children: ReactNode; perm?: Permission 
     return (
       <div className="app-boot">
         <span className="spinner" />
-        <span>Cargando INVENTRA…</span>
+        <span>Cargando Invencodi…</span>
       </div>
     );
   }

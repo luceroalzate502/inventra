@@ -195,7 +195,7 @@ export function Settings() {
       const data: Record<string, unknown[]> = {};
       for (const name of TABLES) data[name] = await db.table(name).toArray();
       const payload = {
-        app: 'INVENTRA',
+        app: 'Invencodi',
         version: 1,
         exportedAt: new Date().toISOString(),
         company: settings?.companyName ?? '',
@@ -206,7 +206,7 @@ export function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `inventra-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `invencodi-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       const stamp = new Date().toISOString();
@@ -232,8 +232,12 @@ export function Settings() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as BackupFile;
-      if (parsed.app !== 'INVENTRA' || !parsed.data || typeof parsed.data !== 'object') {
-        throw new Error('El archivo no corresponde a un respaldo válido de INVENTRA.');
+      if (
+        (parsed.app !== 'Invencodi' && parsed.app !== 'INVENTRA') ||
+        !parsed.data ||
+        typeof parsed.data !== 'object'
+      ) {
+        throw new Error('El archivo no corresponde a un respaldo válido de Invencodi.');
       }
       if (!Array.isArray(parsed.data.users) || !Array.isArray(parsed.data.products)) {
         throw new Error('El respaldo no contiene las tablas mínimas requeridas.');

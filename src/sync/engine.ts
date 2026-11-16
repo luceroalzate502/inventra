@@ -745,7 +745,7 @@ export async function syncNow(reason = 'manual'): Promise<SyncResult> {
     setLastSyncAt(stamp);
     setStatus({ state: 'idle', lastSync: stamp, lastError: null });
     await refreshPending();
-    console.info(`INVENTRA sync (${reason}): ${pushed} enviados, ${pull.applied} recibidos.`);
+    console.info(`Invencodi sync (${reason}): ${pushed} enviados, ${pull.applied} recibidos.`);
     return { ok: true, pushed, pulled: pull.applied };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido de sincronización.';

@@ -1,4 +1,4 @@
-# INVENTRA — Módulos de planta
+# Invencodi — Módulos de planta
 
 Documentación funcional y técnica de los módulos añadidos para operación industrial: producción diaria, máquinas, almacén 5S, despachos, PNC/Kaizen, Excel e indicadores.
 

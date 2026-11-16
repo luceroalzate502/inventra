@@ -1,4 +1,4 @@
-# INVENTRA — Diseño de navegación
+# Invencodi — Diseño de navegación
 
 ## Estructura adaptativa
 

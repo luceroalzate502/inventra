@@ -278,7 +278,7 @@ export function CloudPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'inventra-supabase.sql';
+    anchor.download = 'invencodi-supabase.sql';
     anchor.click();
     URL.revokeObjectURL(url);
   };

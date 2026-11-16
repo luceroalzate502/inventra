@@ -25,7 +25,7 @@ import type {
   WarehouseLocation,
 } from '../domain/types';
 
-export class InventraDB extends Dexie {
+export class InvencodiDB extends Dexie {
   users!: Table<User, string>;
   products!: Table<Product, string>;
   movements!: Table<Movement, string>;
@@ -84,7 +84,7 @@ export class InventraDB extends Dexie {
   }
 }
 
-export const db = new InventraDB();
+export const db = new InvencodiDB();
 
 /** Genera un consecutivo legible dentro de una transacción abierta. */
 export async function nextCode(prefix: string, pad = 5): Promise<string> {

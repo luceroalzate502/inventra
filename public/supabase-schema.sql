@@ -1,5 +1,5 @@
 -- ============================================================
--- INVENTRA · Esquema de sincronización multidispositivo
+-- Invencodi · Esquema de sincronización multidispositivo
 -- Ejecute este script completo en Supabase:
 --   Dashboard → SQL Editor → New query → Run
 -- ------------------------------------------------------------
@@ -20,7 +20,7 @@ create table if not exists public.inventra_records (
 );
 
 comment on table public.inventra_records is
-  'Copia central de los registros de INVENTRA para sincronización offline-first.';
+  'Copia central de los registros de Invencodi para sincronización offline-first.';
 
 create index if not exists inventra_records_updated_at_idx
   on public.inventra_records (updated_at);

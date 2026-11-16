@@ -88,7 +88,7 @@ export function Movements() {
       filename: 'kardex-movimientos',
       title: 'Historial de movimientos',
       subtitle: `${filtered.length} registros · entradas ${money(totals.inValue)} · salidas ${money(totals.outValue)}`,
-      company: settings?.companyName ?? 'INVENTRA',
+      company: settings?.companyName ?? 'Invencodi',
       user: user?.name,
       landscape: true,
       columns: ['Código', 'Fecha', 'Tipo', 'Producto', 'Cantidad', 'Valor', 'Responsable'],

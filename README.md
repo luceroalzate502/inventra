@@ -1,4 +1,4 @@
-# INVENTRA
+# Invencodi
 
 Sistema de gestión integral de inventarios, construido como **PWA** con React 19, TypeScript y Vite. Funciona en teléfono, tablet y escritorio; guarda la información localmente con IndexedDB (Dexie) y queda preparado para sincronizar con un backend o ERP.
 
@@ -94,7 +94,7 @@ La app está preparada para publicarse como sitio estático. El flujo `.github/w
    ```
 
 2. En el repositorio: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Espere el workflow **Deploy INVENTRA to GitHub Pages** en la pestaña **Actions**.
+3. Espere el workflow **Deploy Invencodi to GitHub Pages** en la pestaña **Actions**.
 4. La app quedará en `https://USUARIO.github.io/inventra/` (o en `https://USUARIO.github.io/` si el repositorio se llama `USUARIO.github.io`).
 
 El workflow calcula la ruta base (`/inventra/`) automáticamente, ajusta el manifest de la PWA y genera `dist/404.html` para que los enlaces profundos (`/inventra/despachos`, `/inventra/pnc`, …) funcionen al recargar o compartir.

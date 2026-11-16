@@ -16,8 +16,8 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         id: base,
-        name: 'INVENTRA — Gestión integral de inventarios',
-        short_name: 'INVENTRA',
+        name: 'Invencodi — Gestión integral de inventarios',
+        short_name: 'Invencodi',
         description:
           'Control de inventarios: entradas, salidas, producción, BOM, trazabilidad y reportes.',
         lang: 'es',
@@ -25,8 +25,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait-primary',
-        background_color: '#f5f7f9',
-        theme_color: '#0e5c63',
+        background_color: '#eef6ff',
+        theme_color: '#f97316',
         categories: ['business', 'productivity'],
         icons: [
           {

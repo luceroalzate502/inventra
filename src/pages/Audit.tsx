@@ -129,7 +129,7 @@ export function Audit() {
 
   const exportLog = () => {
     if (!user) return;
-    exportExcel(`inventra-auditoria-${today}`, [
+    exportExcel(`invencodi-auditoria-${today}`, [
       {
         name: 'Auditoría',
         rows: filtered.map((e) => ({

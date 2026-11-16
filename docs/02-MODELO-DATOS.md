@@ -1,4 +1,4 @@
-# INVENTRA — Modelo de datos
+# Invencodi — Modelo de datos
 
 Base de datos local: **IndexedDB** (Dexie). Los nombres de tabla y campos son los usados en el código (`src/db/schema.ts`).
 

@@ -57,7 +57,7 @@ export function exportPdf(spec: PdfSpec) {
   doc.text(spec.company, 40, 28);
   doc.setFontSize(8.5);
   doc.setTextColor(190, 214, 214);
-  doc.text('Sistema de gestión integral de inventarios · INVENTRA', 40, 45);
+  doc.text('Sistema de gestión integral de inventarios · Invencodi', 40, 45);
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(15);
@@ -93,7 +93,7 @@ export function exportPdf(spec: PdfSpec) {
         doc.internal.pageSize.getHeight() - 20,
         { align: 'right' },
       );
-      doc.text('Documento generado automáticamente — INVENTRA', 40, doc.internal.pageSize.getHeight() - 20);
+      doc.text('Documento generado automáticamente — Invencodi', 40, doc.internal.pageSize.getHeight() - 20);
     },
   });
 

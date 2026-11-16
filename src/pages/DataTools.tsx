@@ -83,7 +83,7 @@ export function DataTools() {
   const [results, setResults] = useState<Partial<Record<ImportKind, ImportResult>>>({});
   const [busy, setBusy] = useState<ImportKind | null>(null);
 
-  const company = settings?.companyName ?? 'INVENTRA';
+  const company = settings?.companyName ?? 'Invencodi';
 
   const totals = useMemo(
     () => ({

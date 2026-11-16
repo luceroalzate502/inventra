@@ -1,4 +1,4 @@
-# INVENTRA — Arquitectura de la solución
+# Invencodi — Arquitectura de la solución
 
 Aplicación móvil de gestión integral de inventarios industriales (materias primas → producción → producto terminado → despacho).
 

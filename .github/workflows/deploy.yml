@@ -1,4 +1,4 @@
-name: Deploy INVENTRA to GitHub Pages
+name: Deploy Invencodi to GitHub Pages
 
 on:
   push:

@@ -10,7 +10,7 @@ async function bootstrap() {
   try {
     await seedIfEmpty();
   } catch (err) {
-    console.error('No fue posible preparar los datos iniciales de INVENTRA.', err);
+    console.error('No fue posible preparar los datos iniciales de Invencodi.', err);
   }
 
   try {

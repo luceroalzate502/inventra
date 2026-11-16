@@ -98,7 +98,7 @@ export function ProductDetail() {
       h1{font-size:15px;margin:0 0 2px} .sku{font-family:Consolas,monospace;font-size:11px;color:#64748b;letter-spacing:.08em}
       .name{font-size:12px;margin:10px 0;font-weight:600;line-height:1.35}
       img{width:220px;height:220px} .foot{font-size:9px;color:#94a3b8;margin-top:8px}
-      </style></head><body><div class="label"><h1>INVENTRA</h1><div class="sku">${product.sku}</div>
+      </style></head><body><div class="label"><h1>Invencodi</h1><div class="sku">${product.sku}</div>
       <img src="${qrUrl}" alt="QR"/><div class="name">${product.name}</div>
       <div class="sku">${product.barcode}</div>
       <div class="foot">${fmtQty(product.stock)} ${product.uom}</div></div>

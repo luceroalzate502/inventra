@@ -1,5 +1,5 @@
 /* ============================================================
-   INVENTRA — Sistema de diseño
+   Invencodi — Sistema de diseño
    ============================================================ */
 
 :root {
@@ -180,9 +180,9 @@ button {
 }
 
 .brand-name {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 750;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.01em;
   color: #fff;
   line-height: 1;
 }

@@ -118,7 +118,7 @@ export function Reports() {
   const totalUnits = stockRows.reduce((a, p) => a + p.stock, 0);
 
   const buildExport = (): { excel: SheetSpec[]; pdf: PdfSpec } => {
-    const company = settings?.companyName ?? 'INVENTRA';
+    const company = settings?.companyName ?? 'Invencodi';
     if (tab === 'existencias') {
       return {
         excel: [
