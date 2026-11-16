@@ -188,11 +188,16 @@ button {
 }
 
 .brand-sub {
-  font-size: 10.5px;
+  font-size: 10px;
   color: #7d93a8;
-  letter-spacing: 0.06em;
-  margin-top: 4px;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  margin-top: 5px;
   text-transform: uppercase;
+}
+
+.sidebar-brand > div:last-child {
+  min-width: 0;
 }
 
 .sidebar-company {

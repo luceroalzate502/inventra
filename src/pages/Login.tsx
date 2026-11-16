@@ -68,7 +68,7 @@ export function Login() {
           </div>
           <div>
             <div className="brand-name">Invencodi</div>
-            <div className="brand-sub">Gestión integral de inventarios</div>
+            <div className="brand-sub">Gestión inteligente de inventarios y producción</div>
           </div>
         </div>
 

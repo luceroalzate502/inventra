@@ -16,10 +16,10 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         id: base,
-        name: 'Invencodi — Gestión integral de inventarios',
+        name: 'Invencodi — Gestión inteligente de inventarios y producción',
         short_name: 'Invencodi',
         description:
-          'Control de inventarios: entradas, salidas, producción, BOM, trazabilidad y reportes.',
+          'Gestión inteligente de inventarios y producción: entradas, salidas, BOM, trazabilidad y reportes.',
         lang: 'es',
         start_url: base,
         scope: base,
