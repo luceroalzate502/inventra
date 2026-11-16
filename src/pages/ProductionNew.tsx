@@ -243,7 +243,7 @@ export function ProductionNew() {
                   value={`${fmtQty(product.stock)} ${product.uom}`}
                   icon={<Factory size={18} />}
                   tone="muted"
-                  foot={<span>{product.location}</span>}
+                  foot={<span>Disponible en inventario</span>}
                 />
               </div>
             </Card>
@@ -268,7 +268,6 @@ export function ProductionNew() {
               <thead>
                 <tr>
                   <th>Componente</th>
-                  <th>Ubicación</th>
                   <th className="num">Por unidad</th>
                   <th className="num">Requerido</th>
                   <th className="num">Disponible</th>
@@ -285,7 +284,6 @@ export function ProductionNew() {
                         <span className="sku">{item.sku}</span>
                       </div>
                     </td>
-                    <td className="small muted">{item.location}</td>
                     <td className="num">
                       {fmtQty(item.perUnit)} {item.uom}
                     </td>

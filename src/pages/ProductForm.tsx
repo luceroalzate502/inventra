@@ -5,7 +5,7 @@ import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { uid } from '../domain/format';
 import { registerMovement } from '../domain/movements';
-import { LOCATIONS, PRODUCT_TYPES, UOMS, UOM_LABEL } from '../domain/types';
+import { PRODUCT_TYPES, UOMS, UOM_LABEL } from '../domain/types';
 import type { Product, ProductType, Uom } from '../domain/types';
 import { Button, Card, Field, Input, PageHeader, SectionTitle, Select, Textarea } from '../components/ui';
 
@@ -18,7 +18,6 @@ interface FormState {
   cost: string;
   minStock: string;
   maxStock: string;
-  location: string;
   barcode: string;
   lotTracked: boolean;
   status: 'activo' | 'inactivo';
@@ -34,7 +33,6 @@ const EMPTY: FormState = {
   cost: '',
   minStock: '',
   maxStock: '',
-  location: LOCATIONS[0],
   barcode: '',
   lotTracked: false,
   status: 'activo',
@@ -64,7 +62,6 @@ export function ProductForm() {
         cost: String(p.cost),
         minStock: String(p.minStock),
         maxStock: String(p.maxStock),
-        location: p.location,
         barcode: p.barcode,
         lotTracked: p.lotTracked,
         status: p.status,
@@ -118,7 +115,6 @@ export function ProductForm() {
           cost: Number(form.cost || 0),
           minStock: Number(form.minStock || 0),
           maxStock: Number(form.maxStock || 0),
-          location: form.location,
           barcode,
           lotTracked: form.lotTracked,
           status: form.status,
@@ -180,7 +176,7 @@ export function ProductForm() {
           stock: 0,
           minStock: Number(form.minStock || 0),
           maxStock: Number(form.maxStock || 0),
-          location: form.location,
+          location: 'Planta',
           barcode,
           lotTracked: form.lotTracked,
           status: form.status,
@@ -325,26 +321,15 @@ export function ProductForm() {
               </Select>
             </Field>
 
-            <div className="field-row">
-              <Field label="Unidad de medida">
-                <Select value={form.uom} onChange={(e) => set('uom', e.target.value as Uom)}>
-                  {UOMS.map((u) => (
-                    <option key={u} value={u}>
-                      {u} — {UOM_LABEL[u]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Ubicación física">
-                <Select value={form.location} onChange={(e) => set('location', e.target.value)}>
-                  {LOCATIONS.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
+            <Field label="Unidad de medida">
+              <Select value={form.uom} onChange={(e) => set('uom', e.target.value as Uom)}>
+                {UOMS.map((u) => (
+                  <option key={u} value={u}>
+                    {u} — {UOM_LABEL[u]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
         </Card>
 

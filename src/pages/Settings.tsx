@@ -65,6 +65,8 @@ interface SettingsForm {
   nit: string;
   warehouseManager: string;
   sessionMinutes: string;
+  shiftDurationMinutes: string;
+  shiftStartHour: string;
   allowNegativeStock: boolean;
   lowStockAlert: boolean;
   decimals: string;
@@ -82,6 +84,8 @@ const EMPTY_FORM: SettingsForm = {
   nit: '',
   warehouseManager: '',
   sessionMinutes: '60',
+  shiftDurationMinutes: '360',
+  shiftStartHour: '6',
   allowNegativeStock: false,
   lowStockAlert: true,
   decimals: '2',
@@ -111,6 +115,8 @@ export function Settings() {
       nit: settings.nit,
       warehouseManager: settings.warehouseManager,
       sessionMinutes: String(settings.sessionMinutes),
+      shiftDurationMinutes: String(settings.shiftDurationMinutes ?? 360),
+      shiftStartHour: String(settings.shiftStartHour ?? 6),
       allowNegativeStock: settings.allowNegativeStock,
       lowStockAlert: settings.lowStockAlert,
       decimals: String(settings.decimals),
@@ -133,6 +139,14 @@ export function Settings() {
     if (!Number.isFinite(decimals) || decimals < 0 || decimals > 4) {
       e.decimals = 'Entre 0 y 4 decimales.';
     }
+    const shiftMinutes = Number(form.shiftDurationMinutes);
+    if (!Number.isFinite(shiftMinutes) || shiftMinutes < 30 || shiftMinutes > 1440) {
+      e.shiftDurationMinutes = 'Entre 30 y 1440 minutos.';
+    }
+    const shiftStart = Number(form.shiftStartHour);
+    if (!Number.isFinite(shiftStart) || shiftStart < 0 || shiftStart > 23) {
+      e.shiftStartHour = 'Entre 0 y 23 horas.';
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -148,6 +162,8 @@ export function Settings() {
         lowStockAlert: form.lowStockAlert,
         decimals,
         warehouseManager: form.warehouseManager.trim(),
+        shiftDurationMinutes: shiftMinutes,
+        shiftStartHour: shiftStart,
       };
       const before = settings;
       await db.settings.put(next);
@@ -381,6 +397,34 @@ export function Settings() {
                   value={form.decimals}
                   onChange={(e) => set('decimals', e.target.value)}
                 />
+              </Field>
+            </div>
+            <div className="field-row">
+              <Field
+                label="Duración de cada turno (min)"
+                error={errors.shiftDurationMinutes}
+                hint="Ej. 360 = 6 horas por turno."
+              >
+                <Input
+                  type="number"
+                  min={30}
+                  max={1440}
+                  value={form.shiftDurationMinutes}
+                  onChange={(e) => set('shiftDurationMinutes', e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Hora de inicio del turno 1"
+                error={errors.shiftStartHour}
+                hint="Los 4 turnos se calculan desde esta hora."
+              >
+                <Select value={form.shiftStartHour} onChange={(e) => set('shiftStartHour', e.target.value)}>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={String(h)}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </Select>
               </Field>
             </div>
             <label className="switch">

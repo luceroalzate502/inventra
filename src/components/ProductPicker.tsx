@@ -95,7 +95,7 @@ export function ProductPicker({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="list-title">{p.name}</div>
                 <div className="list-sub">
-                  {p.sku} · {typeLabel(p.type)} · {p.location}
+                  {p.sku} · {typeLabel(p.type)}
                 </div>
               </div>
               <div style={{ textAlign: 'right', flex: 'none' }}>

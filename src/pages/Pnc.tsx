@@ -13,7 +13,7 @@ import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { dateTime, money, qty as fmtQty } from '../domain/format';
 import { analyzePnc, closePnc, createPnc, pncByDefect, pncSummary, segregatePnc } from '../domain/pnc';
-import { DEFECT_TYPES, PNC_STATUS, ROOT_CAUSES, SHIFTS } from '../domain/types';
+import { DEFECT_TYPES, PNC_STATUS, ROOT_CAUSES, buildShifts, DEFAULT_SHIFT_MINUTES, DEFAULT_SHIFT_START_HOUR } from '../domain/types';
 import type { DefectType, NonConformity, PncStatus, Shift } from '../domain/types';
 import {
   Badge,
@@ -81,7 +81,7 @@ const emptyKaizen = (): KaizenForm => ({
 });
 
 export function Pnc() {
-  const { user, toast } = useApp();
+  const { user, toast, settings } = useApp();
   const pncs = useLiveQuery(() => db.pnc.toArray(), []) ?? [];
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const machines = useLiveQuery(() => db.machines.toArray(), []) ?? [];
@@ -463,7 +463,10 @@ export function Pnc() {
             <Field label="Turno (opcional)">
               <Select value={form.shift} onChange={(e) => set('shift', e.target.value)}>
                 <option value="">Sin turno</option>
-                {SHIFTS.map((s) => (
+                {buildShifts(
+                  settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES,
+                  settings?.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR,
+                ).map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>

@@ -104,7 +104,6 @@ export function Alerts() {
                   <th className="num">Stock</th>
                   <th className="num">Mínimo</th>
                   <th className="num">Valor</th>
-                  <th>Ubicación</th>
                   <th />
                 </tr>
               </thead>
@@ -142,7 +141,6 @@ export function Alerts() {
                     </td>
                     <td className="num muted">{fmtQty(a.product.minStock)}</td>
                     <td className="num">{money(a.product.stock * a.product.cost)}</td>
-                    <td className="small muted">{a.product.location}</td>
                     <td>
                       {user && ['admin', 'jefe', 'almacenista'].includes(user.role) && (
                         <Button

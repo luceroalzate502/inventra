@@ -686,9 +686,14 @@ async function pushDirty(supabase: SupabaseClient): Promise<number> {
 /* ------------------------------------------------------------------ */
 
 let running = false;
+let rerunRequested = false;
 let scheduled: number | null = null;
 
-function scheduleSync(delay = 1800): void {
+/**
+ * Programa una sincronización automática tras cada interacción.
+ * Si ya hay una sincronización en curso, se encola otra al terminar.
+ */
+function scheduleSync(delay = 500): void {
   const config = getCloudConfig();
   if (!config?.autoSync) return;
   if (scheduled) window.clearTimeout(scheduled);
@@ -709,6 +714,7 @@ export async function syncNow(reason = 'manual'): Promise<SyncResult> {
     return { ok: false, pushed: 0, pulled: 0, error: 'Sin conexión a internet.' };
   }
   if (running) {
+    rerunRequested = true;
     return { ok: true, pushed: 0, pulled: 0, skipped: true };
   }
 
@@ -747,6 +753,10 @@ export async function syncNow(reason = 'manual'): Promise<SyncResult> {
     return { ok: false, pushed: 0, pulled: 0, error: message };
   } finally {
     running = false;
+    if (rerunRequested) {
+      rerunRequested = false;
+      scheduleSync(250);
+    }
   }
 }
 

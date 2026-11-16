@@ -133,7 +133,6 @@ export function Reports() {
               UOM: p.uom,
               'Costo unitario': p.cost,
               'Valor total': Math.round(p.stock * p.cost),
-              Ubicación: p.location,
             })),
           },
         ],
@@ -144,7 +143,7 @@ export function Reports() {
           company,
           user: user?.name,
           landscape: true,
-          columns: ['SKU', 'Producto', 'Tipo', 'Stock', 'Costo', 'Valor', 'Ubicación'],
+          columns: ['SKU', 'Producto', 'Tipo', 'Stock', 'Costo', 'Valor'],
           rows: stockRows.map((p) => [
             p.sku,
             p.name,
@@ -152,7 +151,6 @@ export function Reports() {
             `${fmtQty(p.stock)} ${p.uom}`,
             money(p.cost),
             money(p.stock * p.cost),
-            p.location,
           ]),
           totals: [`Valor total: ${money(totalValue)}`],
         },
@@ -419,7 +417,6 @@ export function Reports() {
                     <th className="num">Stock</th>
                     <th className="num">Costo</th>
                     <th className="num">Valor</th>
-                    <th>Ubicación</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -433,7 +430,6 @@ export function Reports() {
                       </td>
                       <td className="num">{money(p.cost)}</td>
                       <td className="num bold">{money(p.stock * p.cost)}</td>
-                      <td className="small muted">{p.location}</td>
                     </tr>
                   ))}
                 </tbody>

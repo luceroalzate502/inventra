@@ -30,7 +30,6 @@ export function Products() {
   const [search, setSearch] = useState(initial);
   const [type, setType] = useState<'all' | ProductType>('all');
   const [status, setStatus] = useState<'activo' | 'inactivo' | 'all'>('activo');
-  const [location, setLocation] = useState('all');
 
   useEffect(() => setSearch(initial), [initial]);
 
@@ -42,7 +41,6 @@ export function Products() {
     return products
       .filter((p) => (status === 'all' ? true : p.status === status))
       .filter((p) => (type === 'all' ? true : p.type === type))
-      .filter((p) => (location === 'all' ? true : p.location === location))
       .filter(
         (p) =>
           !term ||
@@ -52,10 +50,9 @@ export function Products() {
           p.category.toLowerCase().includes(term),
       )
       .sort((a, b) => a.sku.localeCompare(b.sku));
-  }, [products, search, type, status, location]);
+  }, [products, search, type, status]);
 
   const totalValue = filtered.reduce((acc, p) => acc + Math.max(p.stock, 0) * p.cost, 0);
-  const locations = Array.from(new Set((products ?? []).map((p) => p.location))).sort();
   const canEdit = user ? can(user.role, 'products.edit') : false;
 
   const rows = filtered.map((p) => ({
@@ -68,12 +65,11 @@ export function Products() {
     'Stock mínimo': p.minStock,
     'Costo unitario': p.cost,
     'Valor total': Math.round(p.stock * p.cost),
-    Ubicación: p.location,
     Estado: p.status,
   }));
 
   const doExcel = () => {
-    exportExcel('inventario-productos', [{ name: 'Productos', rows, widths: [14, 34, 20, 16, 10, 10, 12, 14, 16, 24, 10] }]);
+    exportExcel('inventario-productos', [{ name: 'Productos', rows, widths: [14, 34, 20, 16, 10, 10, 12, 14, 16, 10] }]);
     toast('Excel generado', 'success', `${rows.length} productos exportados.`);
   };
 
@@ -85,7 +81,7 @@ export function Products() {
       company: settings?.companyName ?? 'INVENTRA',
       user: user?.name,
       landscape: true,
-      columns: ['SKU', 'Producto', 'Tipo', 'Stock', 'Mín.', 'Costo', 'Valor', 'Ubicación', 'Estado'],
+      columns: ['SKU', 'Producto', 'Tipo', 'Stock', 'Mín.', 'Costo', 'Valor', 'Estado'],
       rows: filtered.map((p) => [
         p.sku,
         p.name,
@@ -94,7 +90,6 @@ export function Products() {
         fmtQty(p.minStock),
         money(p.cost),
         money(p.stock * p.cost),
-        p.location,
         p.status,
       ]),
       totals: [`Valor total del inventario filtrado: ${money(totalValue)}`],
@@ -133,14 +128,6 @@ export function Products() {
               <option value="inactivo">Inactivos</option>
               <option value="all">Todos</option>
             </Select>
-            <Select value={location} onChange={(e) => setLocation(e.target.value)} style={{ width: 210 }}>
-              <option value="all">Todas las ubicaciones</option>
-              {locations.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </Select>
           </div>
 
           <div className="row wrap" style={{ gap: 6 }}>
@@ -177,7 +164,6 @@ export function Products() {
                   <th className="num">Mín.</th>
                   <th className="num">Costo</th>
                   <th className="num">Valor</th>
-                  <th>Ubicación</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -214,7 +200,6 @@ export function Products() {
                     <th className="num">Mín.</th>
                     <th className="num">Costo</th>
                     <th className="num">Valor</th>
-                    <th>Ubicación</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -241,7 +226,6 @@ export function Products() {
                       <td className="num muted">{fmtQty(p.minStock)}</td>
                       <td className="num">{money(p.cost)}</td>
                       <td className="num strong">{money(p.stock * p.cost)}</td>
-                      <td className="small muted">{p.location}</td>
                       <td>
                         <ProductStatusBadge stock={p.stock} minStock={p.minStock} />
                       </td>
@@ -269,7 +253,7 @@ export function Products() {
                     <div className="list-main">
                       <div className="list-title">{p.name}</div>
                       <div className="list-sub">
-                        {p.sku} · {p.location}
+                        {p.sku} · {p.category}
                       </div>
                     </div>
                     <div className="list-value">

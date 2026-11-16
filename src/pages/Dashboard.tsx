@@ -11,23 +11,16 @@ import {
   Factory,
   Package,
   PackageX,
-  TrendingUp,
 } from 'lucide-react';
 import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
-import {
-  alertsFor,
-  computeKpis,
-  dailyFlow,
-  rotationRows,
-  valuationByType,
-} from '../domain/reports';
+import { alertsFor, computeKpis, dailyFlow, valuationByType } from '../domain/reports';
 import { money, moneyCompact, pct, qty as fmtQty, timeShort, dateLong } from '../domain/format';
 import { summarize, todayKey } from '../domain/productionDaily';
 import { pncSummary } from '../domain/pnc';
 import { MOVEMENT_META } from '../domain/types';
-import { Badge, Button, Card, CardHead, EmptyState, PageHeader, StatCard } from '../components/ui';
-import { Donut, DonutLegend, FlowBars, Gauge } from '../components/charts';
+import { Button, Card, CardHead, EmptyState, PageHeader, StatCard } from '../components/ui';
+import { Donut, DonutLegend, FlowBars } from '../components/charts';
 
 export function Dashboard() {
   const { user, settings } = useApp();
@@ -50,11 +43,10 @@ export function Dashboard() {
     const slices = valuationByType(products);
     const flow = dailyFlow(movements, 7);
     const alerts = alertsFor(products, movements);
-    const rotation = rotationRows(products, movements, 90);
     const todayRecords = productionRecords.filter((r) => r.date === todayKey());
     const plant = summarize(todayRecords);
     const pnc = pncSummary(pncs);
-    return { kpis, slices, flow, alerts, rotation, plant, pnc };
+    return { kpis, slices, flow, alerts, plant, pnc };
   }, [loading, products, movements, orders, consumptions, counts, productionRecords, pncs]);
 
   if (loading || !data) {
@@ -71,14 +63,9 @@ export function Dashboard() {
     );
   }
 
-  const { kpis, slices, flow, alerts, rotation, plant, pnc } = data;
+  const { kpis, slices, flow, alerts, plant, pnc } = data;
   const recent = movements.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
   const critical = alerts.filter((a) => ['agotado', 'critico', 'bajo'].includes(a.severity)).slice(0, 5);
-  const topRotation = rotation.filter((r) => r.outValue > 0).slice(0, 5);
-  const lowRotation = rotation
-    .filter((r) => r.status === 'sin_movimiento' || r.status === 'baja')
-    .filter((r) => r.product.stock > 0)
-    .slice(0, 5);
   const activeProducts = products.filter((p) => p.status === 'activo');
 
   const hour = new Date().getHours();
@@ -370,104 +357,6 @@ export function Dashboard() {
             })}
           </div>
           )}
-        </Card>
-      </div>
-
-      <div className="grid grid-2">
-        <Card>
-          <CardHead title="Mayor rotación" subtitle="Últimos 90 días por valor despachado" />
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th className="num">Salidas</th>
-                  <th className="num">Valor</th>
-                  <th className="num">Rotación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topRotation.map((r) => (
-                  <tr key={r.product.id}>
-                    <td>
-                      <div className="cell-main">
-                        <span className="name">{r.product.name}</span>
-                        <span className="sku">{r.product.sku}</span>
-                      </div>
-                    </td>
-                    <td className="num">
-                      {fmtQty(r.outQty)} {r.product.uom}
-                    </td>
-                    <td className="num">{money(r.outValue)}</td>
-                    <td className="num">
-                      <Badge tone="ok">{r.rotation.toFixed(1)}x</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHead title="Baja rotación / obsoleto" subtitle="Capital inmovilizado" />
-          {lowRotation.length === 0 ? (
-            <EmptyState icon={<TrendingUp size={22} />} title="Sin inventario inmovilizado" />
-          ) : (
-            <div className="list">
-              {lowRotation.map((r) => (
-                <Link to={`/productos/${r.product.id}`} key={r.product.id} className="list-item">
-                  <div className="list-icon" style={{ background: 'var(--surface-3)', color: 'var(--muted)' }}>
-                    <Package size={16} />
-                  </div>
-                  <div className="list-main">
-                    <div className="list-title">{r.product.name}</div>
-                    <div className="list-sub">
-                      {r.product.sku} · {r.status === 'sin_movimiento' ? 'sin movimiento 60 días' : 'rotación baja'}
-                    </div>
-                  </div>
-                  <div className="list-value">
-                    {money(r.product.stock * r.product.cost)}
-                    <div className="small faint" style={{ fontWeight: 400 }}>
-                      {fmtQty(r.product.stock)} {r.product.uom}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="grid grid-4" style={{ marginTop: 16 }}>
-        <Card>
-          <div className="card-pad">
-            <Gauge value={kpis.exactitud ?? 0} label="Exactitud del inventario" color="var(--brand-2)" />
-          </div>
-        </Card>
-        <Card>
-          <div className="card-pad">
-            <Gauge
-              value={kpis.productionCompliance ?? 0}
-              label="Cumplimiento de producción"
-              color="var(--info)"
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="card-pad">
-            <Gauge value={kpis.wastePct ?? 0} label="Porcentaje de desperdicio" color="var(--warn)" />
-          </div>
-        </Card>
-        <Card>
-          <div className="card-pad">
-            <Gauge
-              value={Math.min(100, (kpis.coverageDays ?? 0) / 1.2)}
-              label={`Cobertura: ${kpis.coverageDays ?? 0} días`}
-              color="var(--ok)"
-              suffix=""
-            />
-          </div>
         </Card>
       </div>
 

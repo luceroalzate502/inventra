@@ -6,7 +6,6 @@ import {
   FileText,
   PackageCheck,
   Plus,
-  ScanLine,
   ShoppingCart,
   Trash2,
   Truck,
@@ -20,7 +19,6 @@ import {
   confirmDispatch,
   createDispatch,
   dispatchTotals,
-  matchScan,
   updateDispatch,
 } from '../domain/dispatch';
 import { exportExcel, exportPdf } from '../domain/export';
@@ -41,7 +39,6 @@ import {
   Select,
   StatCard,
   Textarea,
-  cx,
 } from '../components/ui';
 
 interface NewDispatchForm {
@@ -58,7 +55,6 @@ interface NewItem {
   productId: string;
   requestedQty: string;
   lotCode: string;
-  locationId: string;
 }
 
 const today = () => {
@@ -77,14 +73,12 @@ const emptyForm = (): NewDispatchForm => ({
   notes: '',
 });
 
-const emptyItem = (): NewItem => ({ productId: '', requestedQty: '', lotCode: '', locationId: '' });
+const emptyItem = (): NewItem => ({ productId: '', requestedQty: '', lotCode: '' });
 
 export function Dispatches() {
   const { user, settings, toast } = useApp();
   const dispatches = useLiveQuery(() => db.dispatches.toArray(), []) ?? [];
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
-  const locations = useLiveQuery(() => db.locations.toArray(), []) ?? [];
-  const locationStock = useLiveQuery(() => db.locationStock.toArray(), []) ?? [];
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Dispatch['status']>('all');
@@ -94,13 +88,10 @@ export function Dispatches() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftItems, setDraftItems] = useState<DispatchItem[]>([]);
-  const [scanCode, setScanCode] = useState('');
-  const [scanFeedback, setScanFeedback] = useState<{ kind: 'ok' | 'err'; message: string } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const activeProducts = products.filter((p) => p.status === 'activo');
-  const activeLocations = locations.filter((l) => l.status === 'activa');
   const selected = dispatches.find((d) => d.id === selectedId) ?? null;
 
   const set = <K extends keyof NewDispatchForm>(key: K, value: NewDispatchForm[K]) =>
@@ -135,8 +126,6 @@ export function Dispatches() {
   const openDetail = (dispatch: Dispatch) => {
     setSelectedId(dispatch.id);
     setDraftItems(dispatch.items.map((item) => ({ ...item })));
-    setScanCode('');
-    setScanFeedback(null);
     setDetailOpen(true);
   };
 
@@ -170,7 +159,6 @@ export function Dispatches() {
             productId: row.productId,
             requestedQty: Number(row.requestedQty) || 0,
             lotCode: row.lotCode.trim().toUpperCase() || undefined,
-            locationId: row.locationId || undefined,
           })),
         },
         user,
@@ -199,25 +187,6 @@ export function Dispatches() {
     } finally {
       setBusy(false);
     }
-  };
-
-  const validateScan = (index: number) => {
-    if (!selected) return;
-    const match = matchScan({ ...selected, items: draftItems }, scanCode, products);
-    if (!match) {
-      setScanFeedback({ kind: 'err', message: `Código “${scanCode || '—'}” no pertenece al picking list.` });
-      return;
-    }
-    if (match.index !== index) {
-      setScanFeedback({
-        kind: 'err',
-        message: `Poka-Yoke: el código corresponde a ${match.item.sku}, no a ${draftItems[index].sku}.`,
-      });
-      return;
-    }
-    patchDraft(index, { scanned: true, pickedQty: draftItems[index].requestedQty });
-    setScanFeedback({ kind: 'ok', message: `Código validado para ${match.item.sku}. Cantidad pickeada confirmada.` });
-    setScanCode('');
   };
 
   const confirm = async () => {
@@ -258,12 +227,11 @@ export function Dispatches() {
       subtitle: `${selected.customer}${selected.orderRef ? ` · Pedido ${selected.orderRef}` : ''} · ${selected.date}`,
       company: settings?.companyName ?? 'INVENTRA',
       user: user?.name,
-      columns: ['SKU', 'Producto', 'Lote', 'Ubicación', 'Cantidad', 'UOM'],
+      columns: ['SKU', 'Producto', 'Lote', 'Cantidad', 'UOM'],
       rows: draftItems.map((item) => [
         item.sku,
         item.name,
         item.lotCode ?? '—',
-        item.locationName ?? '—',
         fmtQty(item.pickedQty || item.requestedQty),
         item.uom,
       ]),
@@ -287,13 +255,11 @@ export function Dispatches() {
           SKU: item.sku,
           Producto: item.name,
           Lote: item.lotCode ?? '',
-          Ubicación: item.locationName ?? '',
           Solicitado: item.requestedQty,
           Pickeado: item.pickedQty,
           UOM: item.uom,
-          'Poka-Yoke': item.scanned ? 'Validado' : 'Pendiente',
         })),
-        widths: [14, 24, 16, 16, 30, 20, 22, 12, 12, 8, 14],
+        widths: [14, 24, 16, 16, 30, 20, 12, 12, 8],
       },
     ]);
   };
@@ -305,15 +271,13 @@ export function Dispatches() {
   const canConfirm =
     selected !== null &&
     draftItems.length > 0 &&
-    draftItems.every(
-      (item) => item.scanned && item.pickedQty > 0 && Math.abs(item.pickedQty - item.requestedQty) < 0.0001,
-    );
+    draftItems.every((item) => item.pickedQty > 0 && Math.abs(item.pickedQty - item.requestedQty) < 0.0001);
 
   return (
     <>
       <PageHeader
-        title="Despachos y Poka-Yoke"
-        subtitle="Picking list contra pedido, validación por escaneo y remisión / packing list"
+        title="Despachos"
+        subtitle="Picking list contra pedido, remisión y packing list"
         actions={
           <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNewOpen(true)}>
             Nuevo despacho
@@ -359,7 +323,7 @@ export function Dispatches() {
       <Card>
         <CardHead
           title="Órdenes de despacho"
-          subtitle="Toque un despacho para hacer picking, validar códigos y confirmar la salida"
+          subtitle="Toque un despacho para hacer picking y confirmar la salida"
           icon={<Truck size={18} color="var(--brand-3)" />}
           actions={
             <div className="row" style={{ gap: 8 }}>
@@ -435,12 +399,6 @@ export function Dispatches() {
             </tbody>
           </table>
         </div>
-        <div className="table-foot">
-          <span>
-            <ScanLine size={13} style={{ verticalAlign: -2, marginRight: 4 }} />
-            El Poka-Yoke exige escanear el SKU, código de barras o lote de cada línea y pickear la cantidad exacta.
-          </span>
-        </div>
       </Card>
 
       {/* ----------------------------- Nuevo despacho ----------------------------- */}
@@ -511,11 +469,7 @@ export function Dispatches() {
                     <Field label="Producto">
                       <Select
                         value={item.productId}
-                        onChange={(e) => {
-                          const next = products.find((p) => p.id === e.target.value);
-                          setItem(index, 'productId', e.target.value);
-                          if (next?.locationId) setItem(index, 'locationId', next.locationId);
-                        }}
+                        onChange={(e) => setItem(index, 'productId', e.target.value)}
                       >
                         <option value="">Seleccione…</option>
                         {activeProducts.map((p) => (
@@ -536,16 +490,6 @@ export function Dispatches() {
                     </Field>
                   </div>
                   <div className="field-row">
-                    <Field label="Ubicación de picking">
-                      <Select value={item.locationId} onChange={(e) => setItem(index, 'locationId', e.target.value)}>
-                        <option value="">Sin ubicación específica</option>
-                        {activeLocations.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.code} · {l.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
                     <Field label="Lote (opcional)">
                       <Input
                         value={item.lotCode}
@@ -554,14 +498,14 @@ export function Dispatches() {
                         className="mono"
                       />
                     </Field>
-                  </div>
-                  <div className="row-between">
-                    <span className="small faint">
-                      {product ? `Stock total: ${fmtQty(product.stock)} ${product.uom}` : 'Seleccione un producto'}
-                    </span>
-                    <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => removeNewItem(index)}>
-                      Quitar
-                    </Button>
+                    <div className="row-between" style={{ alignItems: 'flex-end' }}>
+                      <span className="small faint">
+                        {product ? `Stock total: ${fmtQty(product.stock)} ${product.uom}` : 'Seleccione un producto'}
+                      </span>
+                      <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => removeNewItem(index)}>
+                        Quitar
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -657,25 +601,16 @@ export function Dispatches() {
             )}
 
             <div className="row-between">
-              <div className="meta-label">Picking y validación Poka-Yoke</div>
+              <div className="meta-label">Picking</div>
               <span className="small faint">
-                {draftItems.filter((i) => i.scanned).length} de {draftItems.length} líneas validadas
+                {draftItems.filter((i) => i.pickedQty > 0).length} de {draftItems.length} líneas con cantidad
               </span>
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
               {draftItems.map((item, index) => {
                 const product = products.find((p) => p.id === item.productId);
-                const available = item.locationId
-                  ? locationStock
-                      .filter(
-                        (s) =>
-                          s.productId === item.productId &&
-                          s.locationId === item.locationId &&
-                          (!item.lotCode || (s.lotCode ?? '') === item.lotCode),
-                      )
-                      .reduce((a, s) => a + Math.max(0, s.qty), 0)
-                  : product?.stock ?? 0;
+                const available = product?.stock ?? 0;
                 const disabled = selected.status === 'despachado' || selected.status === 'anulado';
                 return (
                   <div
@@ -696,29 +631,12 @@ export function Dispatches() {
                           {item.sku} · solicitado {fmtQty(item.requestedQty)} {item.uom} · disponible {fmtQty(available)}
                         </div>
                       </div>
-                      <Badge tone={item.scanned ? 'ok' : 'warn'} dot>
-                        {item.scanned ? 'Validado' : 'Pendiente'}
+                      <Badge tone={item.pickedQty > 0 ? 'ok' : 'muted'} dot>
+                        {item.pickedQty > 0 ? 'Pickeado' : 'Pendiente'}
                       </Badge>
                     </div>
 
-                    <div className="field-row-3">
-                      <Field label="Ubicación">
-                        <Select
-                          value={item.locationId ?? ''}
-                          onChange={(e) => {
-                            const location = locations.find((l) => l.id === e.target.value);
-                            patchDraft(index, { locationId: location?.id, locationName: location?.name });
-                          }}
-                          disabled={disabled}
-                        >
-                          <option value="">Sin ubicación</option>
-                          {activeLocations.map((l) => (
-                            <option key={l.id} value={l.id}>
-                              {l.code} · {l.name}
-                            </option>
-                          ))}
-                        </Select>
-                      </Field>
+                    <div className="field-row">
                       <Field label="Lote">
                         <Input
                           value={item.lotCode ?? ''}
@@ -738,53 +656,15 @@ export function Dispatches() {
                         />
                       </Field>
                     </div>
-
-                    {!disabled && (
-                      <div className="scan-row">
-                        <Input
-                          value={scanCode}
-                          onChange={(e) => setScanCode(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              validateScan(index);
-                            }
-                          }}
-                          placeholder={`Escanee ${item.sku}, código de barras o lote…`}
-                          className="mono"
-                        />
-                        <Button
-                          variant="secondary"
-                          icon={<ScanLine size={16} />}
-                          onClick={() => validateScan(index)}
-                          disabled={!scanCode.trim()}
-                        >
-                          Validar
-                        </Button>
-                      </div>
-                    )}
-
-                    {!disabled && item.scanned && (
-                      <div className={cx('scan-feedback', 'ok')}>
-                        <CheckCircle2 size={15} /> Línea validada: cantidad pickeada igual a la solicitada.
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
 
-            {scanFeedback && (
-              <div className={cx('scan-feedback', scanFeedback.kind)}>
-                {scanFeedback.kind === 'ok' ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
-                {scanFeedback.message}
-              </div>
-            )}
-
             {!canConfirm && selected.status !== 'despachado' && selected.status !== 'anulado' && (
               <div className="small muted">
-                Para confirmar: todas las líneas deben estar escaneadas y con cantidad pickeada exacta. El sistema
-                valida stock, lote no bloqueado por PNC y ubicación.
+                Para confirmar, todas las líneas deben tener la cantidad pickeada exacta. El sistema valida stock
+                disponible y lote no bloqueado por PNC.
               </div>
             )}
 

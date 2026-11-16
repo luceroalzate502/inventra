@@ -23,7 +23,7 @@ import {
   todayKey,
   validateProductionRecord,
 } from '../domain/productionDaily';
-import { MACHINE_TYPES, SCRAP_REASONS, SHIFTS, shiftLabel } from '../domain/types';
+import { MACHINE_TYPES, SCRAP_REASONS, buildShifts, DEFAULT_SHIFT_MINUTES, DEFAULT_SHIFT_START_HOUR, shiftLabel } from '../domain/types';
 import type { Machine, ProductionRecord, Shift } from '../domain/types';
 import {
   Badge,
@@ -88,7 +88,7 @@ function NumberStepper({
 }
 
 export function ProductionDaily() {
-  const { user, toast } = useApp();
+  const { user, toast, settings } = useApp();
   const [date, setDate] = useState(todayKey());
   const [shift, setShift] = useState<Shift>(currentShift());
   const [machineId, setMachineId] = useState('');
@@ -99,7 +99,7 @@ export function ProductionDaily() {
   const [scrapQty, setScrapQty] = useState('');
   const [shots, setShots] = useState('');
   const [cavities, setCavities] = useState('8');
-  const [plannedMinutes, setPlannedMinutes] = useState('360');
+  const [plannedMinutes, setPlannedMinutes] = useState(String(settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES));
   const [downtimeMinutes, setDowntimeMinutes] = useState('0');
   const [idealCycleSeconds, setIdealCycleSeconds] = useState('18');
   const [scrapReason, setScrapReason] = useState(SCRAP_REASONS[0]);
@@ -110,7 +110,15 @@ export function ProductionDaily() {
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const orders = useLiveQuery(() => db.productionOrders.toArray(), []) ?? [];
   const records = useLiveQuery(() => db.productionRecords.toArray(), []) ?? [];
-  const locations = useLiveQuery(() => db.locations.toArray(), []) ?? [];
+
+  const shifts = useMemo(
+    () =>
+      buildShifts(
+        settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES,
+        settings?.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR,
+      ),
+    [settings?.shiftDurationMinutes, settings?.shiftStartHour],
+  );
 
   const activeMachines = machines.filter((m) => m.status === 'activa');
   const finishedProducts = products.filter((p) => p.status === 'activo' && (p.type === 'PT' || p.type === 'PP'));
@@ -133,16 +141,21 @@ export function ProductionDaily() {
     if (!productId && finishedProducts.length > 0) setProductId(finishedProducts[0].id);
   }, [finishedProducts, productId]);
 
+  useEffect(() => {
+    setPlannedMinutes(String(shifts.find((s) => s.value === shift)?.minutes ?? DEFAULT_SHIFT_MINUTES));
+    // Se ajusta al cambiar la duración configurada en Ajustes.
+  }, [settings?.shiftDurationMinutes]);
+
   const selectMachine = (m: Machine) => {
     setMachineId(m.id);
     setCavities(String(m.cavities || 1));
     setIdealCycleSeconds(String(m.idealCycleSeconds || 18));
-    setPlannedMinutes(String(SHIFTS.find((s) => s.value === shift)?.minutes ?? 360));
+    setPlannedMinutes(String(shifts.find((s) => s.value === shift)?.minutes ?? DEFAULT_SHIFT_MINUTES));
   };
 
   const selectShift = (s: Shift) => {
     setShift(s);
-    setPlannedMinutes(String(SHIFTS.find((x) => x.value === s)?.minutes ?? 360));
+    setPlannedMinutes(String(shifts.find((x) => x.value === s)?.minutes ?? DEFAULT_SHIFT_MINUTES));
   };
 
   const dayRecords = useMemo(() => records.filter((r) => r.date === date), [records, date]);
@@ -151,7 +164,7 @@ export function ProductionDaily() {
     [dayRecords, shift],
   );
   const daySummary = useMemo(() => summarize(dayRecords), [dayRecords]);
-  const shiftSummary = useMemo(() => summarizeByShift(dayRecords), [dayRecords]);
+  const shiftSummary = useMemo(() => summarizeByShift(dayRecords, shifts), [dayRecords, shifts]);
 
   const preview = useMemo(() => {
     const temp: ProductionRecord = {
@@ -229,12 +242,11 @@ export function ProductionDaily() {
         user,
       );
       if (validate) {
-        const validated = await validateProductionRecord(record.id, user);
-        const location = locations.find((l) => l.id === validated.locationId);
+        await validateProductionRecord(record.id, user);
         toast(
           'Turno validado e ingresado a almacén',
           'success',
-          `${record.goodQty} und conformes${record.scrapQty > 0 ? ` · ${record.scrapQty} scrap segregado` : ''}${location ? ` · ${location.name}` : ''}`,
+          `${record.goodQty} und conformes${record.scrapQty > 0 ? ` · ${record.scrapQty} scrap segregado` : ''}`,
         );
       } else {
         toast('Turno guardado', 'success', `${record.code} · pendiente de validar`);
@@ -260,17 +272,15 @@ export function ProductionDaily() {
     }
   };
 
-  const hasCurado = locations.some((l) => l.type === 'curado');
-
   return (
     <>
       <PageHeader
         title="Registro diario de producción"
-        subtitle="Captura táctil por turno, máquina y molde · 4 turnos"
+        subtitle="Captura táctil por turno, máquina y molde"
         actions={
           <div className="row" style={{ gap: 8 }}>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 150 }} />
-            <Badge tone="brand">{shiftLabel(shift)}</Badge>
+            <Badge tone="brand">{shiftLabel(shift, shifts)}</Badge>
           </div>
         }
       />
@@ -313,7 +323,7 @@ export function ProductionDaily() {
             <div>
               <div className="meta-label" style={{ marginBottom: 8 }}>Turno</div>
               <div className="shift-grid">
-                {SHIFTS.map((s) => (
+                {shifts.map((s) => (
                   <button
                     key={s.value}
                     type="button"
@@ -423,12 +433,6 @@ export function ProductionDaily() {
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Paros, ajustes de molde, cambios de color, novedades…" />
             </Field>
 
-            {!hasCurado && (
-              <div className="row small" style={{ gap: 8, background: 'var(--warn-soft)', color: 'var(--warn)', padding: '10px 12px', borderRadius: 9 }}>
-                <AlertTriangle size={15} /> Cree ubicaciones 5S (Curado / PT) para que la validación registre el stock por ubicación.
-              </div>
-            )}
-
             <div className="row wrap" style={{ gap: 8 }}>
               <Button variant="secondary" icon={<Save size={16} />} onClick={() => save(false)} disabled={busy}>
                 Guardar turno
@@ -502,7 +506,7 @@ export function ProductionDaily() {
 
       <Card>
         <CardHead
-          title={`Registros · ${shiftLabel(shift)}`}
+          title={`Registros · ${shiftLabel(shift, shifts)}`}
           subtitle={`${shiftRecords.length} captura(s) del ${date}`}
           icon={<ClipboardCheck size={18} color="var(--brand-3)" />}
         />

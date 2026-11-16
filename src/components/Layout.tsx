@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   Layers,
   LogOut,
-  MapPin,
   Menu,
   Moon,
   Package,
@@ -61,7 +60,6 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/movimientos', label: 'Movimientos', icon: ArrowLeftRight },
       { to: '/entradas/nueva', label: 'Entradas', icon: ArrowDownToLine, perm: 'inventory.entry' },
       { to: '/salidas/nueva', label: 'Salidas', icon: ArrowUpFromLine, perm: 'inventory.exit' },
-      { to: '/ubicaciones', label: 'Ubicaciones 5S', icon: MapPin, perm: 'warehouse.locations' },
       { to: '/despachos', label: 'Despachos', icon: Truck, perm: 'dispatch.manage' },
     ],
   },
@@ -110,8 +108,7 @@ const TITLES: { path: string; title: string; crumb: string }[] = [
   { path: '/bom', title: 'Listas de materiales', crumb: 'BOM' },
   { path: '/mrp', title: 'MRP', crumb: 'Planificación de materiales' },
   { path: '/pnc', title: 'Producto no conforme', crumb: 'PNC y Kaizen' },
-  { path: '/ubicaciones', title: 'Ubicaciones y 5S', crumb: 'Almacén interno' },
-  { path: '/despachos', title: 'Despachos', crumb: 'Picking y Poka-Yoke' },
+  { path: '/despachos', title: 'Despachos', crumb: 'Picking y remisión' },
   { path: '/indicadores', title: 'Indicadores', crumb: 'OEE e inventario' },
   { path: '/datos', title: 'Importar / exportar', crumb: 'Excel y plantillas' },
   { path: '/reportes', title: 'Reportes', crumb: 'Análisis' },
@@ -363,12 +360,12 @@ export function Layout() {
           <button className="qa-item" onClick={() => go('/produccion-diaria')}>
             <ClipboardCheck size={20} color="var(--brand-3)" />
             <strong>Registrar turno</strong>
-            <span>Captura por máquina y 4 turnos</span>
+            <span>Captura por máquina y turno</span>
           </button>
           <button className="qa-item" onClick={() => go('/despachos')}>
             <Truck size={20} color="var(--warn)" />
             <strong>Despacho</strong>
-            <span>Picking con Poka-Yoke</span>
+            <span>Picking y remisión</span>
           </button>
           <button className="qa-item" onClick={() => go('/conteo')}>
             <ClipboardCheck size={20} color="var(--muted)" />

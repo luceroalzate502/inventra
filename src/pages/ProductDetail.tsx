@@ -10,7 +10,6 @@ import {
   CircleDollarSign,
   Factory,
   Layers,
-  MapPin,
   Pencil,
   Printer,
   QrCode,
@@ -102,7 +101,7 @@ export function ProductDetail() {
       </style></head><body><div class="label"><h1>INVENTRA</h1><div class="sku">${product.sku}</div>
       <img src="${qrUrl}" alt="QR"/><div class="name">${product.name}</div>
       <div class="sku">${product.barcode}</div>
-      <div class="foot">${product.location} · ${fmtQty(product.stock)} ${product.uom}</div></div>
+      <div class="foot">${fmtQty(product.stock)} ${product.uom}</div></div>
       <script>window.onload=()=>{window.print();}</script></body></html>`);
     win.document.close();
   };
@@ -211,12 +210,6 @@ export function ProductDetail() {
               <div>
                 <div className="meta-label">Unidad de medida</div>
                 <div className="meta-value">{product.uom}</div>
-              </div>
-              <div>
-                <div className="meta-label">Ubicación</div>
-                <div className="meta-value row" style={{ gap: 5 }}>
-                  <MapPin size={13} /> {product.location}
-                </div>
               </div>
               <div>
                 <div className="meta-label">Creado</div>
@@ -491,7 +484,6 @@ export function ProductDetail() {
           )}
           <div className="mono bold mt-8">{product.sku}</div>
           <div className="small muted">{product.barcode}</div>
-          <div className="small muted mt-8">{product.location}</div>
         </div>
       </Modal>
     </>

@@ -8,7 +8,6 @@ import {
   Factory,
   FileSpreadsheet,
   Layers,
-  MapPin,
   Package,
   Upload,
 } from 'lucide-react';
@@ -20,13 +19,12 @@ import {
   TEMPLATES,
   downloadTemplate,
   importBoms,
-  importLocations,
   importMachines,
   importProducts,
   readExcelFile,
 } from '../domain/importExport';
 import type { ExcelRow, ImportResult } from '../domain/importExport';
-import { DISPATCH_STATUS, LOCATION_TYPES, MACHINE_TYPES, PNC_STATUS } from '../domain/types';
+import { DISPATCH_STATUS, MACHINE_TYPES, PNC_STATUS } from '../domain/types';
 import type { SessionUser } from '../domain/types';
 import {
   Badge,
@@ -37,7 +35,7 @@ import {
   StatCard,
 } from '../components/ui';
 
-type ImportKind = keyof typeof TEMPLATES;
+type ImportKind = Exclude<keyof typeof TEMPLATES, 'locations'>;
 
 const IMPORT_META: Record<
   ImportKind,
@@ -51,7 +49,7 @@ const IMPORT_META: Record<
 > = {
   products: {
     title: 'Productos',
-    description: 'Catálogo de SKU, tipo, costo, mínimos y ubicación.',
+    description: 'Catálogo de SKU, tipo, costo y mínimos.',
     icon: Package,
     color: '#0f9b8e',
     run: importProducts,
@@ -62,13 +60,6 @@ const IMPORT_META: Record<
     icon: Layers,
     color: '#3b82f6',
     run: importBoms,
-  },
-  locations: {
-    title: 'Ubicaciones 5S',
-    description: 'Racks, estibas, curado, PT y zonas de despacho.',
-    icon: MapPin,
-    color: '#8b5cf6',
-    run: importLocations,
   },
   machines: {
     title: 'Máquinas',
@@ -84,7 +75,6 @@ export function DataTools() {
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const boms = useLiveQuery(() => db.boms.toArray(), []) ?? [];
   const bomItems = useLiveQuery(() => db.bomItems.toArray(), []) ?? [];
-  const locations = useLiveQuery(() => db.locations.toArray(), []) ?? [];
   const machines = useLiveQuery(() => db.machines.toArray(), []) ?? [];
   const records = useLiveQuery(() => db.productionRecords.toArray(), []) ?? [];
   const pncs = useLiveQuery(() => db.pnc.toArray(), []) ?? [];
@@ -99,13 +89,12 @@ export function DataTools() {
     () => ({
       products: products.length,
       boms: boms.length,
-      locations: locations.length,
       machines: machines.length,
       records: records.length,
       pncs: pncs.length,
       dispatches: dispatches.length,
     }),
-    [products, boms, locations, machines, records, pncs, dispatches],
+    [products, boms, machines, records, pncs, dispatches],
   );
 
   const handleFile = async (kind: ImportKind, file: File | undefined) => {
@@ -144,14 +133,13 @@ export function DataTools() {
           STOCK: p.stock,
           STOCK_MIN: p.minStock,
           STOCK_MAX: p.maxStock,
-          UBICACION: p.location,
           CODIGO_BARRAS: p.barcode,
           LOTE: p.lotTracked ? 'SI' : 'NO',
           CATEGORIA: p.category,
           DESCRIPCION: p.description,
           ESTADO: p.status,
         })),
-        widths: [16, 34, 8, 8, 12, 12, 12, 12, 26, 18, 8, 18, 40, 10],
+        widths: [16, 34, 8, 8, 12, 12, 12, 12, 18, 8, 18, 40, 10],
       },
     ]);
   };
@@ -186,24 +174,6 @@ export function DataTools() {
       }));
     });
     exportExcel('catalogo-bom.xlsx', [{ name: 'BOM', rows, widths: [18, 18, 8, 14, 18, 10, 10, 12, 10] }]);
-  };
-
-  const exportLocations = () => {
-    exportExcel('catalogo-ubicaciones.xlsx', [
-      {
-        name: 'Ubicaciones',
-        rows: locations.map((l) => ({
-          CODIGO: l.code,
-          NOMBRE: l.name,
-          TIPO: l.type,
-          ZONA: l.zone,
-          CAPACIDAD: l.capacity,
-          ESTADO: l.status,
-          NOTAS: l.notes,
-        })),
-        widths: [16, 32, 16, 18, 12, 10, 40],
-      },
-    ]);
   };
 
   const exportMachines = () => {
@@ -292,13 +262,11 @@ export function DataTools() {
             SKU: item.sku,
             Producto: item.name,
             Lote: item.lotCode ?? '',
-            Ubicación: item.locationName ?? '',
             Solicitado: item.requestedQty,
             Pickeado: item.pickedQty,
-            'Poka-Yoke': item.scanned ? 'Validado' : 'Pendiente',
           })),
         ),
-        widths: [14, 12, 26, 16, 16, 16, 30, 24, 24, 12, 12, 14],
+        widths: [14, 12, 26, 16, 16, 16, 30, 24, 12, 12],
       },
     ]);
   };
@@ -317,7 +285,7 @@ export function DataTools() {
 
       <div className="kpi-grid">
         <StatCard label="Productos" value={totals.products} icon={<Package size={18} />} tone="brand" foot={<span>SKU en catálogo</span>} />
-        <StatCard label="BOM" value={totals.boms} icon={<Layers size={18} />} tone="info" foot={<span>{totals.locations} ubicaciones 5S</span>} />
+        <StatCard label="BOM" value={totals.boms} icon={<Layers size={18} />} tone="info" foot={<span>listas de materiales</span>} />
         <StatCard label="Máquinas" value={totals.machines} icon={<Factory size={18} />} tone="warn" foot={<span>{totals.records} registros de producción</span>} />
         <StatCard label="Operación" value={totals.pncs + totals.dispatches} icon={<FileSpreadsheet size={18} />} tone="ok" foot={<span>{totals.pncs} PNC · {totals.dispatches} despachos</span>} />
       </div>
@@ -330,7 +298,7 @@ export function DataTools() {
         />
         <div className="card-pad">
           <div className="location-grid">
-            {(Object.keys(TEMPLATES) as ImportKind[]).map((kind) => {
+            {(Object.keys(IMPORT_META) as ImportKind[]).map((kind) => {
               const meta = IMPORT_META[kind];
               const template = TEMPLATES[kind];
               const Icon = meta.icon;
@@ -430,7 +398,7 @@ export function DataTools() {
         <div className="table-foot">
           <span>
             <CheckCircle2 size={13} style={{ verticalAlign: -2, marginRight: 4 }} />
-            Las importaciones crean o actualizan registros por código (SKU, código BOM, ubicación o máquina) y quedan en auditoría.
+            Las importaciones crean o actualizan registros por código (SKU, código BOM o máquina) y quedan en auditoría.
           </span>
         </div>
       </Card>
@@ -449,9 +417,6 @@ export function DataTools() {
             </Button>
             <Button variant="secondary" icon={<Layers size={15} />} onClick={exportBoms}>
               BOM ({boms.length})
-            </Button>
-            <Button variant="secondary" icon={<MapPin size={15} />} onClick={exportLocations}>
-              Ubicaciones ({locations.length})
             </Button>
             <Button variant="secondary" icon={<Factory size={15} />} onClick={exportMachines}>
               Máquinas ({machines.length})
@@ -474,7 +439,7 @@ export function DataTools() {
           <div className="small faint">
             Última carga: {records.length > 0 ? dateTime(records.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0].createdAt) : 'sin registros'}
             {' · '}Valor de inventario: {money(products.reduce((a, p) => a + Math.max(0, p.stock) * p.cost, 0))}
-            {' · '}Tipos: {LOCATION_TYPES.length} ubicaciones, {MACHINE_TYPES.length} máquinas
+            {' · '}Tipos: {MACHINE_TYPES.length} máquinas
           </div>
         </div>
       </Card>

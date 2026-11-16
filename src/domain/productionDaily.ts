@@ -16,6 +16,7 @@ import type {
   Shift,
 } from './types';
 import { SHIFTS } from './types';
+import type { ShiftDef } from './types';
 
 const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const clamp = (n: number, min = 0, max = 100) => Math.min(max, Math.max(min, n));
@@ -29,7 +30,8 @@ export const localDateKey = (value: Date | string = new Date()): string => {
 
 export const todayKey = () => localDateKey(new Date());
 
-export const shiftMinutes = (shift: Shift) => SHIFTS.find((s) => s.value === shift)?.minutes ?? 360;
+export const shiftMinutes = (shift: Shift, shifts: ShiftDef[] = SHIFTS) =>
+  shifts.find((s) => s.value === shift)?.minutes ?? 360;
 
 export interface RecordMetrics {
   produced: number;
@@ -391,8 +393,8 @@ export function summarize(records: ProductionRecord[]): PlantSummary {
   };
 }
 
-export function summarizeByShift(records: ProductionRecord[]) {
-  return SHIFTS.map((s) => ({ shift: s, ...summarize(records.filter((r) => r.shift === s.value)) }));
+export function summarizeByShift(records: ProductionRecord[], shifts: ShiftDef[] = SHIFTS) {
+  return shifts.map((s) => ({ shift: s, ...summarize(records.filter((r) => r.shift === s.value)) }));
 }
 
 export function summarizeByMachine(records: ProductionRecord[], machines: Machine[]) {

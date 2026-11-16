@@ -6,7 +6,6 @@ import { useApp } from '../context/AppContext';
 import { uid } from '../domain/format';
 import { can } from '../domain/permissions';
 import { registerMovement } from '../domain/movements';
-import { LOCATIONS } from '../domain/types';
 import type { PhysicalCount } from '../domain/types';
 import { dateTime, money, pct, qty as fmtQty } from '../domain/format';
 import {
@@ -30,7 +29,6 @@ export function Counts() {
   const products = useLiveQuery(() => db.products.toArray(), []);
 
   const [newOpen, setNewOpen] = useState(false);
-  const [location, setLocation] = useState('all');
   const [category, setCategory] = useState('all');
   const [active, setActive] = useState<PhysicalCount | null>(null);
   const [draft, setDraft] = useState<PhysicalCount | null>(null);
@@ -44,10 +42,9 @@ export function Counts() {
       (products ?? []).filter(
         (p) =>
           p.status === 'activo' &&
-          (location === 'all' || p.location === location) &&
           (category === 'all' || p.category === category),
       ),
-    [products, location, category],
+    [products, category],
   );
 
   const list = (counts ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -65,7 +62,7 @@ export function Counts() {
       id: uid(),
       code,
       status: 'abierto',
-      location: location === 'all' ? 'Todas las ubicaciones' : location,
+      location: 'General',
       items: preview.map((p) => ({
         productId: p.id,
         sku: p.sku,
@@ -226,7 +223,6 @@ export function Counts() {
             <thead>
               <tr>
                 <th>Código</th>
-                <th>Ubicación</th>
                 <th>Estado</th>
                 <th className="num">Productos</th>
                 <th className="num">Diferencias</th>
@@ -238,14 +234,13 @@ export function Counts() {
             </thead>
             <tbody>
               {list.length === 0 ? (
-                <EmptyRow colSpan={9} message="Sin conteos. Inicie una toma física para empezar." />
+                <EmptyRow colSpan={8} message="Sin conteos. Inicie una toma física para empezar." />
               ) : (
                 list.map((c) => {
                   const diffs = c.items.filter((i) => Math.abs(i.diff) > 0.0001);
                   return (
                     <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => openCount(c)}>
                       <td className="mono strong">{c.code}</td>
-                      <td className="small">{c.location}</td>
                       <td>
                         <Badge tone={c.status === 'cerrado' ? 'ok' : 'warn'}>{c.status}</Badge>
                       </td>
@@ -285,16 +280,6 @@ export function Counts() {
         }
       >
         <div className="field-row">
-          <Field label="Ubicación">
-            <Select value={location} onChange={(e) => setLocation(e.target.value)}>
-              <option value="all">Todas las ubicaciones</option>
-              {LOCATIONS.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </Select>
-          </Field>
           <Field label="Categoría">
             <Select value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">Todas las categorías</option>
@@ -323,7 +308,7 @@ export function Counts() {
           setDraft(null);
         }}
         title={`Conteo ${draft?.code ?? ''}`}
-        subtitle={`${draft?.location ?? ''} · ${draft?.status === 'cerrado' ? 'cerrado' : 'en progreso'}`}
+        subtitle={`${draft?.status === 'cerrado' ? 'Cerrado' : 'En progreso'} · ${draft?.items.length ?? 0} producto(s)`}
         size="lg"
         footer={
           draft?.status === 'abierto' && canManage ? (

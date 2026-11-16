@@ -23,7 +23,6 @@ import { ProductionOrderDetail } from './pages/ProductionOrder';
 import { Mrp } from './pages/Mrp';
 import { Machines } from './pages/Machines';
 import { ProductionDaily } from './pages/ProductionDaily';
-import { Locations } from './pages/Locations';
 import { Dispatches } from './pages/Dispatches';
 import { Pnc } from './pages/Pnc';
 import { DataTools } from './pages/DataTools';
@@ -112,7 +111,6 @@ export function App() {
           <Route path="bom/:id" element={guard('bom.edit', <BomEditor />)} />
           <Route path="mrp" element={guard('mrp.view', <Mrp />)} />
           <Route path="pnc" element={guard('pnc.manage', <Pnc />)} />
-          <Route path="ubicaciones" element={guard('warehouse.locations', <Locations />)} />
           <Route path="despachos" element={guard('dispatch.manage', <Dispatches />)} />
           <Route path="indicadores" element={guard('reports.view', <Indicators />)} />
           <Route path="datos" element={guard('data.import', <DataTools />)} />

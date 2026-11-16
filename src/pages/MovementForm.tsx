@@ -239,7 +239,7 @@ export function MovementForm({ mode }: { mode: 'entry' | 'exit' }) {
                     {product.name}
                   </div>
                   <div className="small muted">
-                    {product.sku} · {product.location} · {money(product.cost)} / {product.uom}
+                    {product.sku} · {money(product.cost)} / {product.uom}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

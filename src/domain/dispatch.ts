@@ -54,7 +54,6 @@ export async function createDispatch(input: DispatchInput, user: SessionUser): P
         lotCode: raw.lotCode?.trim().toUpperCase() || undefined,
         locationId: location?.id,
         locationName: location?.name,
-        scanned: false,
       });
     }
 
@@ -148,7 +147,7 @@ export async function updateDispatch(
   });
 }
 
-/** Valida un escaneo contra el picking list (Poka-Yoke). */
+/** Valida un escaneo contra el picking list (solo apoyo de búsqueda, sin bloqueo). */
 export function matchScan(dispatch: Dispatch, code: string, products: Product[]): { index: number; item: DispatchItem } | null {
   const term = code.trim().toLowerCase();
   if (!term) return null;
@@ -180,9 +179,6 @@ export async function confirmDispatch(id: string, user: SessionUser): Promise<Di
           'PICKING',
           `La cantidad pickeada de ${item.sku} (${item.pickedQty}) no coincide con la solicitada (${item.requestedQty}).`,
         );
-      }
-      if (!item.scanned) {
-        throw new BusinessError('POKA_YOKE', `Valide el código de ${item.sku} antes de despachar (Poka-Yoke).`);
       }
       const product = await db.products.get(item.productId);
       if (!product) throw new BusinessError('PRODUCT', `El producto ${item.sku} no existe.`);

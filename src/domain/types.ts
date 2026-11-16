@@ -102,21 +102,47 @@ export const LOCATIONS = ['Planta', 'Almacén'];
 
 export type Shift = 1 | 2 | 3 | 4;
 
-export const SHIFTS: {
+export interface ShiftDef {
   value: Shift;
   label: string;
   short: string;
   start: string;
   end: string;
   minutes: number;
-}[] = [
-  { value: 1, label: 'Turno 1', short: 'T1', start: '06:00', end: '12:00', minutes: 360 },
-  { value: 2, label: 'Turno 2', short: 'T2', start: '12:00', end: '18:00', minutes: 360 },
-  { value: 3, label: 'Turno 3', short: 'T3', start: '18:00', end: '00:00', minutes: 360 },
-  { value: 4, label: 'Turno 4', short: 'T4', start: '00:00', end: '06:00', minutes: 360 },
-];
+}
 
-export const shiftLabel = (s: Shift) => SHIFTS.find((x) => x.value === s)?.label ?? `Turno ${s}`;
+export const DEFAULT_SHIFT_MINUTES = 360;
+export const DEFAULT_SHIFT_START_HOUR = 6;
+
+/** Construye los 4 turnos a partir de la duración y hora de inicio configuradas. */
+export function buildShifts(
+  durationMinutes: number = DEFAULT_SHIFT_MINUTES,
+  startHour: number = DEFAULT_SHIFT_START_HOUR,
+): ShiftDef[] {
+  const duration = Math.max(1, Math.round(durationMinutes || DEFAULT_SHIFT_MINUTES));
+  const start = ((Math.round(startHour || 0) % 24) + 24) % 24;
+  const clock = (totalMinutes: number) => {
+    const h = Math.floor((totalMinutes % 1440) / 60);
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  return ([1, 2, 3, 4] as Shift[]).map((value) => {
+    const startMinutes = start * 60 + (value - 1) * duration;
+    return {
+      value,
+      label: `Turno ${value}`,
+      short: `T${value}`,
+      start: clock(startMinutes),
+      end: clock(startMinutes + duration),
+      minutes: duration,
+    };
+  });
+}
+
+export const SHIFTS: ShiftDef[] = buildShifts();
+
+export const shiftLabel = (s: Shift, shifts: ShiftDef[] = SHIFTS) =>
+  shifts.find((x) => x.value === s)?.label ?? `Turno ${s}`;
 
 export type MachineType = 'inyectora' | 'sopladora' | 'extrusora' | 'otra';
 
@@ -344,7 +370,8 @@ export interface DispatchItem {
   lotCode?: string;
   locationId?: string;
   locationName?: string;
-  scanned: boolean;
+  /** Campo heredado del antiguo Poka-Yoke; ya no es obligatorio. */
+  scanned?: boolean;
 }
 
 export interface Dispatch {
@@ -557,6 +584,10 @@ export interface Settings {
   lowStockAlert: boolean;
   decimals: number;
   warehouseManager: string;
+  /** Duración de cada turno en minutos (por defecto 360). */
+  shiftDurationMinutes?: number;
+  /** Hora de inicio del turno 1 (0–23, por defecto 6). */
+  shiftStartHour?: number;
 }
 
 export interface Counter {

@@ -18,7 +18,7 @@ import { dateTime, money, pct, qty as fmtQty } from '../domain/format';
 import { exportExcel, exportPdf } from '../domain/export';
 import { pncByDefect } from '../domain/pnc';
 import { localDateKey, summarize, summarizeByMachine, summarizeByShift, todayKey } from '../domain/productionDaily';
-import { DEFECT_TYPES } from '../domain/types';
+import { DEFECT_TYPES, buildShifts, DEFAULT_SHIFT_MINUTES, DEFAULT_SHIFT_START_HOUR } from '../domain/types';
 import {
   Badge,
   Button,
@@ -63,7 +63,15 @@ export function Indicators() {
   );
 
   const overall = useMemo(() => summarize(periodRecords), [periodRecords]);
-  const byShift = useMemo(() => summarizeByShift(periodRecords), [periodRecords]);
+  const shifts = useMemo(
+    () =>
+      buildShifts(
+        settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES,
+        settings?.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR,
+      ),
+    [settings?.shiftDurationMinutes, settings?.shiftStartHour],
+  );
+  const byShift = useMemo(() => summarizeByShift(periodRecords, shifts), [periodRecords, shifts]);
   const byMachine = useMemo(() => summarizeByMachine(periodRecords, machines), [periodRecords, machines]);
 
   const periodPncs = useMemo(() => pncs.filter((p) => inRange(p.date)), [pncs, from, to]);
