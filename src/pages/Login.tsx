@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Boxes,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -16,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { db } from '../db/schema';
 import { uid } from '../domain/format';
 import { Button, Field, Input, Modal } from '../components/ui';
+import { BrandMark } from '../components/BrandMark';
 
 export function Login() {
   const { user, login, toast } = useApp();
@@ -64,7 +64,7 @@ export function Login() {
       <section className="login-art">
         <div className="row" style={{ gap: 12 }}>
           <div className="brand-mark">
-            <Boxes size={22} />
+            <BrandMark size={23} />
           </div>
           <div>
             <div className="brand-name">Invencodi</div>

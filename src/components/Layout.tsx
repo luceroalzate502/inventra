@@ -7,7 +7,6 @@ import {
   ArrowUpFromLine,
   BarChart3,
   Bell,
-  Boxes,
   ClipboardCheck,
   ClipboardList,
   Cloud,
@@ -41,6 +40,7 @@ import { ROLES } from '../domain/types';
 import type { Permission } from '../domain/permissions';
 import { Badge, Button, Modal, cx } from './ui';
 import { Scanner } from './Scanner';
+import { BrandMark } from './BrandMark';
 import { useSyncStatus } from '../sync/useSync';
 
 interface NavItem {
@@ -168,7 +168,7 @@ export function Layout() {
     <>
       <div className="sidebar-brand">
         <div className="brand-mark">
-          <Boxes size={21} />
+          <BrandMark size={22} />
         </div>
         <div>
           <div className="brand-name">Invencodi</div>
