@@ -321,7 +321,7 @@ export function CloudPage() {
           value={status.lastSync ? dateTime(status.lastSync) : '—'}
           icon={<RefreshCw size={18} />}
           tone="info"
-          foot={<span>{status.state === 'offline' ? 'sin conexión' : 'automática cada 30 s'}</span>}
+          foot={<span>{status.state === 'offline' ? 'sin conexión' : 'automática en cada cambio'}</span>}
         />
         <StatCard
           label="Este equipo"
@@ -504,7 +504,7 @@ export function CloudPage() {
                       setConfig(getCloudConfig());
                     }}
                   />
-                  Sincronización automática (cada 30 s y al recuperar conexión)
+                  Sincronización automática (en cada cambio y al recuperar conexión)
                 </label>
                 <div className="row wrap" style={{ gap: 8 }}>
                   <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={runSync} disabled={busy}>
