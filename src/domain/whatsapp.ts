@@ -6,6 +6,9 @@
  * indicativo del país.
  */
 
+/** Número de contacto de Invencodi. Se puede cambiar en Configuración. */
+export const DEFAULT_WHATSAPP_NUMBER = '+57 3245408337';
+
 /** Deja únicamente los dígitos del número. */
 export function whatsappDigits(value?: string | null): string {
   return (value ?? '').replace(/\D/g, '');
@@ -15,6 +18,17 @@ export function whatsappDigits(value?: string | null): string {
 export function isValidWhatsApp(value?: string | null): boolean {
   const digits = whatsappDigits(value);
   return digits.length >= 10 && digits.length <= 15;
+}
+
+/**
+ * Número efectivo del botón: el configurado en la empresa o, si no hay uno
+ * válido, el número de contacto de fábrica.
+ */
+export function resolveWhatsAppNumber(
+  settings?: { whatsappNumber?: string } | null,
+): string {
+  const configured = settings?.whatsappNumber?.trim();
+  return configured && isValidWhatsApp(configured) ? configured : DEFAULT_WHATSAPP_NUMBER;
 }
 
 /**
@@ -29,11 +43,4 @@ export function whatsappLink(
   if (!digits) return null;
   const text = message?.trim();
   return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
-}
-
-/** Presentación legible del número configurado. */
-export function formatWhatsApp(value?: string | null): string {
-  const raw = (value ?? '').trim();
-  if (!raw) return '';
-  return /^[\d\s]+$/.test(raw) ? `+${whatsappDigits(raw)}` : raw;
 }

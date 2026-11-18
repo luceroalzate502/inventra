@@ -17,7 +17,7 @@ import { uid } from '../domain/format';
 import { Button, Field, Input, Modal } from '../components/ui';
 import { BrandMark } from '../components/BrandMark';
 import { WhatsAppIcon } from '../components/WhatsAppButton';
-import { whatsappLink } from '../domain/whatsapp';
+import { resolveWhatsAppNumber, whatsappLink } from '../domain/whatsapp';
 
 export function Login() {
   const { user, login, toast, settings } = useApp();
@@ -46,7 +46,7 @@ export function Login() {
   };
 
   const waHref = whatsappLink(
-    settings?.whatsappNumber,
+    resolveWhatsAppNumber(settings),
     `Hola, necesito ayuda con Invencodi${settings?.companyName ? ` — ${settings.companyName}` : ''}.`,
   );
 

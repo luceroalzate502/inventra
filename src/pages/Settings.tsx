@@ -20,7 +20,7 @@ import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { dateTime, uid } from '../domain/format';
 import { recalculateStock } from '../domain/movements';
-import { isValidWhatsApp } from '../domain/whatsapp';
+import { isValidWhatsApp, DEFAULT_WHATSAPP_NUMBER } from '../domain/whatsapp';
 import { resetSyncTracking } from '../sync/engine';
 import { useSyncStatus } from '../sync/useSync';
 import type { Settings as AppSettings } from '../domain/types';
@@ -117,7 +117,7 @@ export function Settings() {
       companyName: settings.companyName,
       nit: settings.nit,
       warehouseManager: settings.warehouseManager,
-      whatsappNumber: settings.whatsappNumber ?? '',
+      whatsappNumber: settings.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER,
       sessionMinutes: String(settings.sessionMinutes),
       shiftDurationMinutes: String(settings.shiftDurationMinutes ?? 360),
       shiftStartHour: String(settings.shiftStartHour ?? 6),
@@ -379,7 +379,7 @@ export function Settings() {
             <Field
               label="WhatsApp de contacto"
               error={errors.whatsappNumber}
-              hint="Activa el botón flotante de WhatsApp. Déjelo vacío para ocultarlo. Ej.: +57 300 123 4567."
+              hint="Número que abre el botón flotante y el enlace del login. Ej.: +57 324 540 8337."
             >
               <Input
                 value={form.whatsappNumber}

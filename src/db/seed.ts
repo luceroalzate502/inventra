@@ -1,6 +1,7 @@
 import { db } from './schema';
 import { hashPin } from '../domain/auth';
 import { uid } from '../domain/format';
+import { DEFAULT_WHATSAPP_NUMBER } from '../domain/whatsapp';
 import type { Settings, User } from '../domain/types';
 
 /* ------------------------------------------------------------------ */
@@ -90,6 +91,7 @@ export async function seedIfEmpty(): Promise<boolean> {
     warehouseManager: 'Administrador',
     shiftDurationMinutes: 360,
     shiftStartHour: 6,
+    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
   };
   await db.settings.put(settings);
 

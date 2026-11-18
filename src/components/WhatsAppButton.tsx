@@ -1,10 +1,5 @@
-import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { db } from '../db/schema';
-import { uid } from '../domain/format';
-import { can } from '../domain/permissions';
-import { isValidWhatsApp, whatsappLink } from '../domain/whatsapp';
-import { Button, Field, Input, Modal } from './ui';
+import { resolveWhatsAppNumber, whatsappLink } from '../domain/whatsapp';
 
 /** Glifo de WhatsApp (relleno, para el botón flotante). */
 export function WhatsAppIcon({ size = 27 }: { size?: number }) {
@@ -18,25 +13,19 @@ export function WhatsAppIcon({ size = 27 }: { size?: number }) {
 /**
  * Botón flotante de WhatsApp.
  *
- * Si ya hay un número configurado abre el chat con un mensaje precargado. Si
- * no lo hay, el administrador puede registrarlo en el momento; el número queda
- * en la configuración de la empresa y se sincroniza con los demás equipos.
+ * Abre el chat con el número de contacto de la empresa (Configuración → Datos
+ * de la empresa) y un mensaje precargado con el usuario y la compañía.
  */
 export function WhatsAppButton() {
-  const { user, settings, toast, reloadSettings } = useApp();
-  const [setupOpen, setSetupOpen] = useState(false);
-  const [number, setNumber] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const configured = isValidWhatsApp(settings?.whatsappNumber);
+  const { user, settings, toast } = useApp();
+  const number = resolveWhatsAppNumber(settings);
 
   const message = user
     ? `Hola, soy ${user.name}${settings?.companyName ? ` de ${settings.companyName}` : ''}. Le escribo desde Invencodi.`
     : `Hola, necesito ayuda con Invencodi${settings?.companyName ? ` — ${settings.companyName}` : ''}.`;
 
-  const openWhatsApp = (value?: string | null) => {
-    const link = whatsappLink(value, message);
+  const handleClick = () => {
+    const link = whatsappLink(number, message);
     if (!link) return;
     const win = window.open(link, '_blank', 'noopener,noreferrer');
     if (!win) {
@@ -48,108 +37,15 @@ export function WhatsAppButton() {
     }
   };
 
-  const handleClick = () => {
-    if (configured) {
-      openWhatsApp(settings?.whatsappNumber);
-      return;
-    }
-    if (user && can(user.role, 'settings.manage')) {
-      setNumber(settings?.whatsappNumber ?? '');
-      setError('');
-      setSetupOpen(true);
-      return;
-    }
-    toast(
-      'WhatsApp sin configurar',
-      'warn',
-      'Solicite al administrador registrar el número de contacto en Configuración.',
-    );
-  };
-
-  const save = async () => {
-    if (!user || !settings) return;
-    const value = number.trim();
-    if (!isValidWhatsApp(value)) {
-      setError('Escriba el número con indicativo de país (entre 10 y 15 dígitos).');
-      return;
-    }
-    setBusy(true);
-    try {
-      const next = { ...settings, whatsappNumber: value };
-      await db.settings.put(next);
-      await db.audit.add({
-        id: uid(),
-        entity: 'settings',
-        entityId: 'global',
-        action: 'actualizar',
-        summary: 'WhatsApp de contacto actualizado',
-        before: settings,
-        after: next,
-        userId: user.id,
-        userName: user.name,
-        at: new Date().toISOString(),
-      });
-      await reloadSettings();
-      setSetupOpen(false);
-      toast('WhatsApp configurado', 'success', 'El botón abrirá el chat con ese número.');
-      openWhatsApp(value);
-    } catch (err) {
-      toast(
-        'No fue posible guardar',
-        'error',
-        err instanceof Error ? err.message : 'Intente nuevamente.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <>
-      <button
-        type="button"
-        className="wa-fab"
-        onClick={handleClick}
-        aria-label="Abrir WhatsApp"
-        title={configured ? 'Escríbanos por WhatsApp' : 'Configurar WhatsApp'}
-      >
-        <WhatsAppIcon />
-      </button>
-
-      <Modal
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        title="WhatsApp de contacto"
-        subtitle="Número que abrirá el botón flotante"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setSetupOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={save} disabled={busy}>
-              {busy ? 'Guardando…' : 'Guardar y abrir WhatsApp'}
-            </Button>
-          </>
-        }
-      >
-        <Field
-          label="Número con indicativo"
-          error={error}
-          hint="Ejemplo: +57 300 123 4567. Se guarda en la configuración y se comparte con los demás equipos."
-        >
-          <Input
-            value={number}
-            onChange={(e) => {
-              setNumber(e.target.value);
-              setError('');
-            }}
-            placeholder="+57 300 123 4567"
-            inputMode="tel"
-            autoComplete="tel"
-            autoFocus
-          />
-        </Field>
-      </Modal>
-    </>
+    <button
+      type="button"
+      className="wa-fab"
+      onClick={handleClick}
+      aria-label="Abrir WhatsApp"
+      title="Escríbanos por WhatsApp"
+    >
+      <WhatsAppIcon />
+    </button>
   );
 }
