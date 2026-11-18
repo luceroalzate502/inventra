@@ -588,6 +588,8 @@ export interface Settings {
   shiftDurationMinutes?: number;
   /** Hora de inicio del turno 1 (0–23, por defecto 6). */
   shiftStartHour?: number;
+  /** Número de WhatsApp de contacto (con indicativo) para el botón de ayuda. */
+  whatsappNumber?: string;
 }
 
 export interface Counter {

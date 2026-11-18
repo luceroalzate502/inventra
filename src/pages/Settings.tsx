@@ -20,6 +20,7 @@ import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { dateTime, uid } from '../domain/format';
 import { recalculateStock } from '../domain/movements';
+import { isValidWhatsApp } from '../domain/whatsapp';
 import { resetSyncTracking } from '../sync/engine';
 import { useSyncStatus } from '../sync/useSync';
 import type { Settings as AppSettings } from '../domain/types';
@@ -64,6 +65,7 @@ interface SettingsForm {
   companyName: string;
   nit: string;
   warehouseManager: string;
+  whatsappNumber: string;
   sessionMinutes: string;
   shiftDurationMinutes: string;
   shiftStartHour: string;
@@ -83,6 +85,7 @@ const EMPTY_FORM: SettingsForm = {
   companyName: '',
   nit: '',
   warehouseManager: '',
+  whatsappNumber: '',
   sessionMinutes: '60',
   shiftDurationMinutes: '360',
   shiftStartHour: '6',
@@ -114,6 +117,7 @@ export function Settings() {
       companyName: settings.companyName,
       nit: settings.nit,
       warehouseManager: settings.warehouseManager,
+      whatsappNumber: settings.whatsappNumber ?? '',
       sessionMinutes: String(settings.sessionMinutes),
       shiftDurationMinutes: String(settings.shiftDurationMinutes ?? 360),
       shiftStartHour: String(settings.shiftStartHour ?? 6),
@@ -131,6 +135,9 @@ export function Settings() {
     const e: Record<string, string> = {};
     if (form.companyName.trim().length < 3) e.companyName = 'Indique la razón social.';
     if (!form.nit.trim()) e.nit = 'El NIT es obligatorio.';
+    if (form.whatsappNumber.trim() && !isValidWhatsApp(form.whatsappNumber)) {
+      e.whatsappNumber = 'Use el indicativo del país y entre 10 y 15 dígitos.';
+    }
     const minutes = Number(form.sessionMinutes);
     if (!Number.isFinite(minutes) || minutes < 5 || minutes > 480) {
       e.sessionMinutes = 'Entre 5 y 480 minutos.';
@@ -164,6 +171,7 @@ export function Settings() {
         warehouseManager: form.warehouseManager.trim(),
         shiftDurationMinutes: shiftMinutes,
         shiftStartHour: shiftStart,
+        whatsappNumber: form.whatsappNumber.trim() || undefined,
       };
       const before = settings;
       await db.settings.put(next);
@@ -368,6 +376,18 @@ export function Settings() {
                 />
               </Field>
             </div>
+            <Field
+              label="WhatsApp de contacto"
+              error={errors.whatsappNumber}
+              hint="Activa el botón flotante de WhatsApp. Déjelo vacío para ocultarlo. Ej.: +57 300 123 4567."
+            >
+              <Input
+                value={form.whatsappNumber}
+                onChange={(e) => set('whatsappNumber', e.target.value)}
+                placeholder="+57 300 123 4567"
+                inputMode="tel"
+              />
+            </Field>
             <Field label="Moneda">
               <Select value="COP" disabled>
                 <option value="COP">Peso colombiano (COP)</option>

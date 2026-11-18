@@ -16,9 +16,11 @@ import { db } from '../db/schema';
 import { uid } from '../domain/format';
 import { Button, Field, Input, Modal } from '../components/ui';
 import { BrandMark } from '../components/BrandMark';
+import { WhatsAppIcon } from '../components/WhatsAppButton';
+import { whatsappLink } from '../domain/whatsapp';
 
 export function Login() {
-  const { user, login, toast } = useApp();
+  const { user, login, toast, settings } = useApp();
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [show, setShow] = useState(false);
@@ -42,6 +44,11 @@ export function Login() {
       setBusy(false);
     }
   };
+
+  const waHref = whatsappLink(
+    settings?.whatsappNumber,
+    `Hola, necesito ayuda con Invencodi${settings?.companyName ? ` — ${settings.companyName}` : ''}.`,
+  );
 
   const requestReset = async () => {
     if (!recoverEmail.trim()) return;
@@ -203,6 +210,13 @@ export function Login() {
               ¿Olvidó su contraseña?
             </button>
           </form>
+
+          {waHref && (
+            <a className="login-wa" href={waHref} target="_blank" rel="noopener noreferrer">
+              <WhatsAppIcon size={16} />
+              ¿Necesita ayuda? Escríbanos por WhatsApp
+            </a>
+          )}
         </div>
       </section>
 

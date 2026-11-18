@@ -41,6 +41,7 @@ import type { Permission } from '../domain/permissions';
 import { Badge, Button, Modal, cx } from './ui';
 import { Scanner } from './Scanner';
 import { BrandMark } from './BrandMark';
+import { WhatsAppButton } from './WhatsAppButton';
 import { useSyncStatus } from '../sync/useSync';
 
 interface NavItem {
@@ -436,6 +437,8 @@ export function Layout() {
         onResult={handleScan}
         title="Escanear producto"
       />
+
+      <WhatsAppButton />
     </div>
   );
 }
