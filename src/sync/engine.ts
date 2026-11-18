@@ -48,6 +48,7 @@ export const SYNC_TABLES = [
   'locations',
   'transfers',
   'dispatches',
+  'messages',
 ] as const;
 
 type SyncTable = (typeof SYNC_TABLES)[number];
@@ -825,6 +826,7 @@ const OPERATIONAL_TABLES = [
   'locations',
   'transfers',
   'dispatches',
+  'messages',
 ] as const;
 
 async function localOperationalCount(): Promise<number> {

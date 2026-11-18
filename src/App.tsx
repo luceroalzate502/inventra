@@ -30,6 +30,7 @@ import { Indicators } from './pages/Indicators';
 import { Reports } from './pages/Reports';
 import { Counts } from './pages/Counts';
 import { Alerts } from './pages/Alerts';
+import { Chat } from './pages/Chat';
 import { Users } from './pages/Users';
 import { Audit } from './pages/Audit';
 import { Settings } from './pages/Settings';
@@ -117,6 +118,7 @@ export function App() {
           <Route path="reportes" element={guard('reports.view', <Reports />)} />
           <Route path="conteo" element={guard('counts.manage', <Counts />)} />
           <Route path="alertas" element={<Alerts />} />
+          <Route path="chat" element={<Chat />} />
           <Route path="usuarios" element={guard('users.manage', <Users />)} />
           <Route path="auditoria" element={guard('audit.view', <Audit />)} />
           <Route path="configuracion" element={guard('settings.manage', <Settings />)} />

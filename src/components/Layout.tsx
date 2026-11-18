@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -17,6 +17,7 @@ import {
   Layers,
   LogOut,
   Menu,
+  MessageSquare,
   Moon,
   Package,
   Plus,
@@ -42,6 +43,7 @@ import { Badge, Button, Modal, cx } from './ui';
 import { Scanner } from './Scanner';
 import { BrandMark } from './BrandMark';
 import { WhatsAppButton } from './WhatsAppButton';
+import { CHAT_READ_EVENT, readChatMarker } from '../domain/chat';
 import { useSyncStatus } from '../sync/useSync';
 
 interface NavItem {
@@ -62,6 +64,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/entradas/nueva', label: 'Entradas', icon: ArrowDownToLine, perm: 'inventory.entry' },
       { to: '/salidas/nueva', label: 'Salidas', icon: ArrowUpFromLine, perm: 'inventory.exit' },
       { to: '/despachos', label: 'Despachos', icon: Truck, perm: 'dispatch.manage' },
+      { to: '/chat', label: 'Chat interno', icon: MessageSquare },
     ],
   },
   {
@@ -115,6 +118,7 @@ const TITLES: { path: string; title: string; crumb: string }[] = [
   { path: '/reportes', title: 'Reportes', crumb: 'Análisis' },
   { path: '/conteo', title: 'Conteo físico', crumb: 'Exactitud' },
   { path: '/alertas', title: 'Alertas', crumb: 'Inventario crítico' },
+  { path: '/chat', title: 'Chat interno', crumb: 'Sala general del equipo' },
   { path: '/usuarios', title: 'Usuarios y roles', crumb: 'Administración' },
   { path: '/auditoria', title: 'Auditoría', crumb: 'Administración' },
   { path: '/configuracion', title: 'Configuración', crumb: 'Administración' },
@@ -130,9 +134,29 @@ export function Layout() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [chatReadAt, setChatReadAt] = useState<string | null>(() => readChatMarker(user?.id));
+
+  useEffect(() => {
+    const syncMarker = () => setChatReadAt(readChatMarker(user?.id));
+    syncMarker();
+    window.addEventListener(CHAT_READ_EVENT, syncMarker);
+    window.addEventListener('storage', syncMarker);
+    return () => {
+      window.removeEventListener(CHAT_READ_EVENT, syncMarker);
+      window.removeEventListener('storage', syncMarker);
+    };
+  }, [user?.id]);
 
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const movements = useLiveQuery(() => db.movements.toArray(), []) ?? [];
+  const chatUnread =
+    useLiveQuery(async () => {
+      if (!user) return 0;
+      const base = chatReadAt
+        ? db.messages.where('createdAt').above(chatReadAt)
+        : db.messages.toCollection();
+      return base.filter((m) => m.authorId !== user.id).count();
+    }, [user?.id, chatReadAt]) ?? 0;
   const sync = useSyncStatus();
   const pending = sync.pending;
 
@@ -196,6 +220,9 @@ export function Layout() {
                   <Icon size={17} />
                   <span>{item.label}</span>
                   {item.to === '/alertas' && alertCount > 0 && <span className="nav-badge">{alertCount}</span>}
+                  {item.to === '/chat' && chatUnread > 0 && (
+                    <span className="nav-badge nav-badge-chat">{chatUnread > 99 ? '99+' : chatUnread}</span>
+                  )}
                 </NavLink>
               );
             })}
@@ -328,6 +355,9 @@ export function Layout() {
         <button className="bottom-item" onClick={() => setMoreOpen(true)}>
           <Menu size={19} />
           Más
+          {chatUnread > 0 && (
+            <span className="bottom-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>
+          )}
         </button>
       </nav>
 
@@ -404,6 +434,11 @@ export function Layout() {
                         {alertCount}
                       </span>
                     )}
+                    {item.to === '/chat' && chatUnread > 0 && (
+                      <span className="nav-badge nav-badge-chat" style={{ marginLeft: 'auto' }}>
+                        {chatUnread > 99 ? '99+' : chatUnread}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -438,7 +473,7 @@ export function Layout() {
         title="Escanear producto"
       />
 
-      <WhatsAppButton />
+      {!location.pathname.startsWith('/chat') && <WhatsAppButton />}
     </div>
   );
 }

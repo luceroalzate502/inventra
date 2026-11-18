@@ -5,6 +5,7 @@ import type {
   AuditEntry,
   Bom,
   BomItem,
+  ChatMessage,
   Consumption,
   Counter,
   Dispatch,
@@ -46,6 +47,7 @@ export class InvencodiDB extends Dexie {
   locationStock!: Table<LocationStock, string>;
   transfers!: Table<Transfer, string>;
   dispatches!: Table<Dispatch, string>;
+  messages!: Table<ChatMessage, string>;
   syncMeta!: Table<SyncMeta, string>;
 
   constructor() {
@@ -80,6 +82,11 @@ export class InvencodiDB extends Dexie {
     // v3: seguimiento local de cambios para sincronización multidispositivo.
     this.version(3).stores({
       syncMeta: 'key, table, dirty, updatedAt',
+    });
+
+    // v4: chat interno entre roles (una sola sala general).
+    this.version(4).stores({
+      messages: 'id, createdAt, authorId',
     });
   }
 }

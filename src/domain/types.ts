@@ -551,6 +551,19 @@ export interface AuditEntry {
   at: string;
 }
 
+/**
+ * Mensaje del chat interno. Todos los roles comparten una única sala general;
+ * cada mensaje conserva el rol de quien lo escribió para mostrarlo como etiqueta.
+ */
+export interface ChatMessage {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorRole: Role;
+  createdAt: string;
+}
+
 export interface CountItem {
   productId: string;
   sku: string;
