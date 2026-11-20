@@ -42,7 +42,6 @@ export interface RecordMetrics {
   quality: number;
   oee: number;
   scrapPct: number;
-  piecesPerShot: number;
 }
 
 /** OEE = Disponibilidad × Rendimiento × Calidad. */
@@ -53,11 +52,15 @@ export function recordMetrics(record: ProductionRecord): RecordMetrics {
   const runMinutes = Math.max(0, planned - downtime);
   const availability = planned > 0 ? clamp((runMinutes / planned) * 100) : 0;
 
-  let performance = 0;
+  // Rendimiento = piezas reales frente a la capacidad teórica del tiempo efectivo.
+  // Ya no depende de los "golpes" capturados manualmente.
+  const cavities = Math.max(1, record.cavities || 1);
+  const idealCycle = Math.max(0, record.idealCycleSeconds || 0);
   let expected = 0;
-  if (record.idealCycleSeconds > 0 && record.shots > 0) {
-    expected = runMinutes > 0 ? (runMinutes * 60) / record.idealCycleSeconds : 0;
-    performance = expected > 0 ? clamp((record.shots / expected) * 100) : 0;
+  let performance = 0;
+  if (idealCycle > 0 && runMinutes > 0) {
+    expected = ((runMinutes * 60) / idealCycle) * cavities;
+    performance = expected > 0 ? clamp((produced / expected) * 100) : 0;
   } else if (record.plannedQty > 0) {
     expected = record.plannedQty;
     performance = clamp((produced / record.plannedQty) * 100);
@@ -66,7 +69,6 @@ export function recordMetrics(record: ProductionRecord): RecordMetrics {
   const quality = produced > 0 ? clamp((record.goodQty / produced) * 100) : 0;
   const oee = (availability * performance * quality) / 10000;
   const scrapPct = produced > 0 ? (record.scrapQty / produced) * 100 : 0;
-  const piecesPerShot = record.shots > 0 ? produced / record.shots : 0;
 
   return {
     produced,
@@ -77,7 +79,6 @@ export function recordMetrics(record: ProductionRecord): RecordMetrics {
     quality: round(quality, 1),
     oee: round(oee, 1),
     scrapPct: round(scrapPct, 1),
-    piecesPerShot: round(piecesPerShot, 2),
   };
 }
 
@@ -110,16 +111,54 @@ const DEFECT_BY_REASON: Record<string, DefectType> = {
   'Otro defecto': 'otro',
 };
 
+export interface ProductionTargets {
+  /** Capacidad teórica del turno, usada por el programa diario y el MRP. */
+  plannedQty: number;
+  /** Ciclos equivalentes a la producción real; se guarda solo como trazabilidad. */
+  shots: number;
+  cavities: number;
+  idealCycleSeconds: number;
+}
+
+/**
+ * Calcula automáticamente la cantidad programada y los ciclos equivalentes a
+ * partir de la duración del turno, el ciclo ideal y las cavidades de la máquina.
+ * El usuario ya no captura "piezas programadas" ni "golpes".
+ */
+export function deriveProductionTargets(input: {
+  goodQty: number;
+  scrapQty: number;
+  cavities: number;
+  idealCycleSeconds: number;
+  plannedMinutes: number;
+  downtimeMinutes?: number;
+  plannedQty?: number;
+  shots?: number;
+}): ProductionTargets {
+  const produced = Math.max(0, input.goodQty + input.scrapQty);
+  const cavities = Math.max(1, Math.round(input.cavities) || 1);
+  const idealCycleSeconds = Math.max(0, input.idealCycleSeconds || 0);
+  const plannedMinutes = Math.max(0, input.plannedMinutes || 0);
+  const capacity =
+    idealCycleSeconds > 0 && plannedMinutes > 0
+      ? ((plannedMinutes * 60) / idealCycleSeconds) * cavities
+      : 0;
+  return {
+    plannedQty: round(input.plannedQty && input.plannedQty > 0 ? input.plannedQty : capacity || produced),
+    shots: round(input.shots && input.shots > 0 ? input.shots : produced / cavities),
+    cavities,
+    idealCycleSeconds,
+  };
+}
+
 export interface ProductionRecordInput {
   date: string;
   shift: Shift;
   machineId: string;
   productId: string;
   orderId?: string;
-  plannedQty: number;
   goodQty: number;
   scrapQty: number;
-  shots: number;
   cavities: number;
   plannedMinutes: number;
   downtimeMinutes: number;
@@ -127,6 +166,9 @@ export interface ProductionRecordInput {
   scrapReason: string;
   notes?: string;
   locationId?: string;
+  /** Valores calculados; se aceptan solo para compatibilidad con datos antiguos. */
+  plannedQty?: number;
+  shots?: number;
 }
 
 export async function createProductionRecord(
@@ -137,7 +179,6 @@ export async function createProductionRecord(
   return db.transaction('rw', [db.machines, db.products, db.productionRecords, db.counters, db.audit, db.outbox], async () => {
     if (!input.date) throw new BusinessError('DATE', 'Indique la fecha de producción.');
     if (!SHIFTS.some((s) => s.value === input.shift)) throw new BusinessError('SHIFT', 'Seleccione un turno válido.');
-    if (input.plannedQty <= 0) throw new BusinessError('QTY', 'La cantidad programada debe ser mayor que cero.');
     if (input.goodQty < 0 || input.scrapQty < 0) throw new BusinessError('QTY', 'Las cantidades no pueden ser negativas.');
     if (input.goodQty + input.scrapQty <= 0) throw new BusinessError('QTY', 'Registre piezas conformes o scrap.');
     if (input.plannedMinutes <= 0) throw new BusinessError('TIME', 'El tiempo planificado debe ser mayor que cero.');
@@ -150,6 +191,16 @@ export async function createProductionRecord(
     if (machine.status !== 'activa') throw new BusinessError('MACHINE', 'La máquina no está activa.');
     const product = await db.products.get(input.productId);
     if (!product) throw new BusinessError('PRODUCT', 'El producto no existe.');
+
+    const targets = deriveProductionTargets({
+      goodQty: input.goodQty,
+      scrapQty: input.scrapQty,
+      cavities: input.cavities || machine.cavities || 1,
+      idealCycleSeconds: input.idealCycleSeconds || machine.idealCycleSeconds || 0,
+      plannedMinutes: input.plannedMinutes,
+      plannedQty: input.plannedQty,
+      shots: input.shots,
+    });
 
     const code = await nextCode('PR', 5);
     const createdAt = at ?? new Date().toISOString();
@@ -165,14 +216,14 @@ export async function createProductionRecord(
       productSku: product.sku,
       productName: product.name,
       orderId: input.orderId || undefined,
-      plannedQty: round(input.plannedQty),
+      plannedQty: targets.plannedQty,
       goodQty: round(input.goodQty),
       scrapQty: round(input.scrapQty),
-      shots: round(input.shots),
-      cavities: Math.max(1, input.cavities || machine.cavities || 1),
+      shots: targets.shots,
+      cavities: targets.cavities,
       plannedMinutes: round(input.plannedMinutes),
       downtimeMinutes: round(input.downtimeMinutes),
-      idealCycleSeconds: input.idealCycleSeconds || machine.idealCycleSeconds || 0,
+      idealCycleSeconds: targets.idealCycleSeconds,
       scrapReason: input.scrapReason,
       notes: input.notes?.trim() ?? '',
       status: 'abierto',

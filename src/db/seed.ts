@@ -89,6 +89,7 @@ export async function seedIfEmpty(): Promise<boolean> {
     lowStockAlert: true,
     decimals: 2,
     warehouseManager: 'Administrador',
+    shiftDurationsMinutes: [360, 360, 360, 360],
     shiftDurationMinutes: 360,
     shiftStartHour: 6,
     whatsappNumber: DEFAULT_WHATSAPP_NUMBER,

@@ -210,16 +210,14 @@ export function DataTools() {
             Producto: r.productSku,
             Nombre: r.productName,
             Lote: r.lotCode,
-            Programado: r.plannedQty,
             Conformes: r.goodQty,
             Scrap: r.scrapQty,
-            Golpes: r.shots,
             'Paro min': r.downtimeMinutes,
             'Ciclo ideal s': r.idealCycleSeconds,
             Estado: r.status,
             Responsable: r.userName,
           })),
-        widths: [14, 12, 8, 12, 16, 30, 24, 12, 12, 10, 10, 10, 14, 12, 22],
+        widths: [14, 12, 8, 12, 16, 30, 24, 12, 10, 12, 14, 12, 22],
       },
     ]);
   };

@@ -24,6 +24,7 @@ import { isValidWhatsApp, DEFAULT_WHATSAPP_NUMBER } from '../domain/whatsapp';
 import { resetSyncTracking } from '../sync/engine';
 import { useSyncStatus } from '../sync/useSync';
 import type { Settings as AppSettings } from '../domain/types';
+import { getShiftDurations, SHIFT_VALUES } from '../domain/types';
 import {
   Badge,
   Button,
@@ -69,7 +70,7 @@ interface SettingsForm {
   warehouseManager: string;
   whatsappNumber: string;
   sessionMinutes: string;
-  shiftDurationMinutes: string;
+  shiftDurations: string[];
   shiftStartHour: string;
   allowNegativeStock: boolean;
   lowStockAlert: boolean;
@@ -89,7 +90,7 @@ const EMPTY_FORM: SettingsForm = {
   warehouseManager: '',
   whatsappNumber: '',
   sessionMinutes: '60',
-  shiftDurationMinutes: '360',
+  shiftDurations: ['360', '360', '360', '360'],
   shiftStartHour: '6',
   allowNegativeStock: false,
   lowStockAlert: true,
@@ -121,7 +122,7 @@ export function Settings() {
       warehouseManager: settings.warehouseManager,
       whatsappNumber: settings.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER,
       sessionMinutes: String(settings.sessionMinutes),
-      shiftDurationMinutes: String(settings.shiftDurationMinutes ?? 360),
+      shiftDurations: getShiftDurations(settings).map(String),
       shiftStartHour: String(settings.shiftStartHour ?? 6),
       allowNegativeStock: settings.allowNegativeStock,
       lowStockAlert: settings.lowStockAlert,
@@ -131,6 +132,12 @@ export function Settings() {
 
   const set = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const setShiftDuration = (index: number, value: string) =>
+    setForm((f) => ({
+      ...f,
+      shiftDurations: f.shiftDurations.map((current, i) => (i === index ? value : current)),
+    }));
 
   const save = async () => {
     if (!user) return;
@@ -148,10 +155,13 @@ export function Settings() {
     if (!Number.isFinite(decimals) || decimals < 0 || decimals > 4) {
       e.decimals = 'Entre 0 y 4 decimales.';
     }
-    const shiftMinutes = Number(form.shiftDurationMinutes);
-    if (!Number.isFinite(shiftMinutes) || shiftMinutes < 30 || shiftMinutes > 1440) {
-      e.shiftDurationMinutes = 'Entre 30 y 1440 minutos.';
-    }
+    const shiftMinutes = form.shiftDurations.map(Number);
+    SHIFT_VALUES.forEach((_, index) => {
+      const value = shiftMinutes[index];
+      if (!Number.isFinite(value) || value < 30 || value > 1440) {
+        e[`shiftDurations.${index}`] = 'Entre 30 y 1440 minutos.';
+      }
+    });
     const shiftStart = Number(form.shiftStartHour);
     if (!Number.isFinite(shiftStart) || shiftStart < 0 || shiftStart > 23) {
       e.shiftStartHour = 'Entre 0 y 23 horas.';
@@ -171,7 +181,9 @@ export function Settings() {
         lowStockAlert: form.lowStockAlert,
         decimals,
         warehouseManager: form.warehouseManager.trim(),
-        shiftDurationMinutes: shiftMinutes,
+        shiftDurationsMinutes: shiftMinutes,
+        // Se mantiene el valor antiguo para bases y clientes que aún no conocen los 4 turnos.
+        shiftDurationMinutes: shiftMinutes[0],
         shiftStartHour: shiftStart,
         whatsappNumber: form.whatsappNumber.trim() || undefined,
       };
@@ -425,24 +437,30 @@ export function Settings() {
                 />
               </Field>
             </div>
+            <div className="form-section-title">Jornada y turnos</div>
+            <div className="field-row-4">
+              {SHIFT_VALUES.map((turno, index) => (
+                <Field
+                  key={turno}
+                  label={`Turno ${turno} (min)`}
+                  error={errors[`shiftDurations.${index}`]}
+                  hint={index === 0 ? 'Ej. 360 = 6 horas.' : undefined}
+                >
+                  <Input
+                    type="number"
+                    min={30}
+                    max={1440}
+                    value={form.shiftDurations[index] ?? '360'}
+                    onChange={(e) => setShiftDuration(index, e.target.value)}
+                  />
+                </Field>
+              ))}
+            </div>
             <div className="field-row">
-              <Field
-                label="Duración de cada turno (min)"
-                error={errors.shiftDurationMinutes}
-                hint="Ej. 360 = 6 horas por turno."
-              >
-                <Input
-                  type="number"
-                  min={30}
-                  max={1440}
-                  value={form.shiftDurationMinutes}
-                  onChange={(e) => set('shiftDurationMinutes', e.target.value)}
-                />
-              </Field>
               <Field
                 label="Hora de inicio del turno 1"
                 error={errors.shiftStartHour}
-                hint="Los 4 turnos se calculan desde esta hora."
+                hint="Los turnos se encadenan desde esta hora con la duración indicada para cada uno."
               >
                 <Select value={form.shiftStartHour} onChange={(e) => set('shiftStartHour', e.target.value)}>
                   {Array.from({ length: 24 }, (_, h) => (

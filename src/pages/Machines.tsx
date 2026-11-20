@@ -314,7 +314,7 @@ export function Machines() {
             </Field>
           </div>
           <div className="field-row-3">
-            <Field label="Cavidades" hint="Piezas por golpe">
+            <Field label="Cavidades" hint="Piezas por ciclo">
               <Input type="number" min={1} value={form.cavities} onChange={(e) => set('cavities', e.target.value)} />
             </Field>
             <Field label="Ciclo ideal (s)" hint="Segundos por golpe">

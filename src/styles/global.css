@@ -1045,6 +1045,12 @@ table.data .strong {
   gap: 14px;
 }
 
+.field-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .form-grid {
   display: grid;
   gap: 16px;
@@ -2109,7 +2115,8 @@ table.data .strong {
   }
 
   .field-row,
-  .field-row-3 {
+  .field-row-3,
+  .field-row-4 {
     grid-template-columns: 1fr;
   }
 

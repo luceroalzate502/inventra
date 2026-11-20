@@ -113,30 +113,65 @@ export interface ShiftDef {
 
 export const DEFAULT_SHIFT_MINUTES = 360;
 export const DEFAULT_SHIFT_START_HOUR = 6;
+export const SHIFT_VALUES: Shift[] = [1, 2, 3, 4];
 
-/** Construye los 4 turnos a partir de la duración y hora de inicio configuradas. */
+type ShiftTimeSettings = {
+  /** Duración independiente de cada turno, en orden del 1 al 4. */
+  shiftDurationsMinutes?: number[];
+  /** Valor antiguo de duración única, usado solo como respaldo. */
+  shiftDurationMinutes?: number;
+  shiftStartHour?: number;
+};
+
+const normalizeShiftMinutes = (value: number | undefined, fallback: number): number => {
+  const minutes = Math.round(Number(value) || 0);
+  return minutes >= 30 && minutes <= 1440 ? minutes : fallback;
+};
+
+/** Devuelve la duración configurada de los 4 turnos, en orden. */
+export function getShiftDurations(settings?: ShiftTimeSettings | null): number[] {
+  const legacy = normalizeShiftMinutes(settings?.shiftDurationMinutes, DEFAULT_SHIFT_MINUTES);
+  return SHIFT_VALUES.map((_, index) =>
+    normalizeShiftMinutes(settings?.shiftDurationsMinutes?.[index], legacy),
+  );
+}
+
+/**
+ * Construye los 4 turnos encadenados desde la hora de inicio. Cada turno puede
+ * tener una duración distinta; se acepta un número para compatibilidad con
+ * configuraciones anteriores.
+ */
 export function buildShifts(
-  durationMinutes: number = DEFAULT_SHIFT_MINUTES,
+  durations: number[] | number = DEFAULT_SHIFT_MINUTES,
   startHour: number = DEFAULT_SHIFT_START_HOUR,
 ): ShiftDef[] {
-  const duration = Math.max(1, Math.round(durationMinutes || DEFAULT_SHIFT_MINUTES));
+  const minutes = SHIFT_VALUES.map((_, index) =>
+    normalizeShiftMinutes(Array.isArray(durations) ? durations[index] : durations, DEFAULT_SHIFT_MINUTES),
+  );
   const start = ((Math.round(startHour || 0) % 24) + 24) % 24;
   const clock = (totalMinutes: number) => {
     const h = Math.floor((totalMinutes % 1440) / 60);
     const m = totalMinutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
-  return ([1, 2, 3, 4] as Shift[]).map((value) => {
-    const startMinutes = start * 60 + (value - 1) * duration;
+  let cursor = start * 60;
+  return SHIFT_VALUES.map((value, index) => {
+    const startMinutes = cursor;
+    cursor += minutes[index];
     return {
       value,
       label: `Turno ${value}`,
       short: `T${value}`,
       start: clock(startMinutes),
-      end: clock(startMinutes + duration),
-      minutes: duration,
+      end: clock(cursor),
+      minutes: minutes[index],
     };
   });
+}
+
+/** Turnos configurados para una instancia concreta de ajustes. */
+export function shiftsFromSettings(settings?: ShiftTimeSettings | null): ShiftDef[] {
+  return buildShifts(getShiftDurations(settings), settings?.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR);
 }
 
 export const SHIFTS: ShiftDef[] = buildShifts();
@@ -597,7 +632,9 @@ export interface Settings {
   lowStockAlert: boolean;
   decimals: number;
   warehouseManager: string;
-  /** Duración de cada turno en minutos (por defecto 360). */
+  /** Duración de cada turno en minutos, en orden del 1 al 4. */
+  shiftDurationsMinutes?: number[];
+  /** Valor antiguo de duración única; se conserva para bases existentes. */
   shiftDurationMinutes?: number;
   /** Hora de inicio del turno 1 (0–23, por defecto 6). */
   shiftStartHour?: number;

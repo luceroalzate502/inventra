@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   AlertTriangle,
@@ -17,13 +17,23 @@ import { useApp } from '../context/AppContext';
 import { dateTime, pct, qty as fmtQty } from '../domain/format';
 import {
   createProductionRecord,
+  deriveProductionTargets,
   recordMetrics,
   summarize,
   summarizeByShift,
   todayKey,
   validateProductionRecord,
 } from '../domain/productionDaily';
-import { MACHINE_TYPES, SCRAP_REASONS, buildShifts, DEFAULT_SHIFT_MINUTES, DEFAULT_SHIFT_START_HOUR, shiftLabel } from '../domain/types';
+import {
+  MACHINE_TYPES,
+  SCRAP_REASONS,
+  DEFAULT_SHIFT_MINUTES,
+  DEFAULT_SHIFT_START_HOUR,
+  SHIFTS,
+  shiftLabel,
+  shiftsFromSettings,
+} from '../domain/types';
+import type { ShiftDef } from '../domain/types';
 import type { Machine, ProductionRecord, Shift } from '../domain/types';
 import {
   Badge,
@@ -41,12 +51,19 @@ import {
   cx,
 } from '../components/ui';
 
-const currentShift = (): Shift => {
-  const h = new Date().getHours();
-  if (h >= 6 && h < 12) return 1;
-  if (h >= 12 && h < 18) return 2;
-  if (h >= 18) return 3;
-  return 4;
+/** Turno vigente según la hora actual y las duraciones configuradas. */
+const currentShift = (shifts: ShiftDef[], startHour: number): Shift => {
+  const now = new Date();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const base = (((Math.round(startHour) % 24) + 24) % 24) * 60;
+  if (minutes < base) return shifts[shifts.length - 1]?.value ?? 4;
+  let cursor = base;
+  for (const s of shifts) {
+    const end = cursor + s.minutes;
+    if (minutes >= cursor && minutes < end) return s.value;
+    cursor = end;
+  }
+  return shifts[0]?.value ?? 1;
 };
 
 function NumberStepper({
@@ -90,35 +107,27 @@ function NumberStepper({
 export function ProductionDaily() {
   const { user, toast, settings } = useApp();
   const [date, setDate] = useState(todayKey());
-  const [shift, setShift] = useState<Shift>(currentShift());
+  const [shift, setShift] = useState<Shift>(() => currentShift(SHIFTS, DEFAULT_SHIFT_START_HOUR));
   const [machineId, setMachineId] = useState('');
   const [productId, setProductId] = useState('');
   const [orderId, setOrderId] = useState('');
-  const [plannedQty, setPlannedQty] = useState('1000');
   const [goodQty, setGoodQty] = useState('');
   const [scrapQty, setScrapQty] = useState('');
-  const [shots, setShots] = useState('');
   const [cavities, setCavities] = useState('8');
-  const [plannedMinutes, setPlannedMinutes] = useState(String(settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES));
+  const [plannedMinutes, setPlannedMinutes] = useState(String(DEFAULT_SHIFT_MINUTES));
   const [downtimeMinutes, setDowntimeMinutes] = useState('0');
   const [idealCycleSeconds, setIdealCycleSeconds] = useState('18');
   const [scrapReason, setScrapReason] = useState(SCRAP_REASONS[0]);
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const shiftInitialized = useRef(false);
 
   const machines = useLiveQuery(() => db.machines.toArray(), []) ?? [];
   const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
   const orders = useLiveQuery(() => db.productionOrders.toArray(), []) ?? [];
   const records = useLiveQuery(() => db.productionRecords.toArray(), []) ?? [];
 
-  const shifts = useMemo(
-    () =>
-      buildShifts(
-        settings?.shiftDurationMinutes ?? DEFAULT_SHIFT_MINUTES,
-        settings?.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR,
-      ),
-    [settings?.shiftDurationMinutes, settings?.shiftStartHour],
-  );
+  const shifts = useMemo(() => shiftsFromSettings(settings), [settings]);
 
   const activeMachines = machines.filter((m) => m.status === 'activa');
   const finishedProducts = products.filter((p) => p.status === 'activo' && (p.type === 'PT' || p.type === 'PP'));
@@ -142,21 +151,24 @@ export function ProductionDaily() {
   }, [finishedProducts, productId]);
 
   useEffect(() => {
+    if (!shiftInitialized.current && settings) {
+      shiftInitialized.current = true;
+      setShift(currentShift(shifts, settings.shiftStartHour ?? DEFAULT_SHIFT_START_HOUR));
+    }
+  }, [settings, shifts]);
+
+  // La duración del turno se toma de la configuración independiente de cada turno.
+  useEffect(() => {
     setPlannedMinutes(String(shifts.find((s) => s.value === shift)?.minutes ?? DEFAULT_SHIFT_MINUTES));
-    // Se ajusta al cambiar la duración configurada en Ajustes.
-  }, [settings?.shiftDurationMinutes]);
+  }, [shifts, shift]);
 
   const selectMachine = (m: Machine) => {
     setMachineId(m.id);
     setCavities(String(m.cavities || 1));
     setIdealCycleSeconds(String(m.idealCycleSeconds || 18));
-    setPlannedMinutes(String(shifts.find((s) => s.value === shift)?.minutes ?? DEFAULT_SHIFT_MINUTES));
   };
 
-  const selectShift = (s: Shift) => {
-    setShift(s);
-    setPlannedMinutes(String(shifts.find((x) => x.value === s)?.minutes ?? DEFAULT_SHIFT_MINUTES));
-  };
+  const selectShift = (s: Shift) => setShift(s);
 
   const dayRecords = useMemo(() => records.filter((r) => r.date === date), [records, date]);
   const shiftRecords = useMemo(
@@ -165,6 +177,18 @@ export function ProductionDaily() {
   );
   const daySummary = useMemo(() => summarize(dayRecords), [dayRecords]);
   const shiftSummary = useMemo(() => summarizeByShift(dayRecords, shifts), [dayRecords, shifts]);
+
+  const targets = useMemo(
+    () =>
+      deriveProductionTargets({
+        goodQty: Number(goodQty) || 0,
+        scrapQty: Number(scrapQty) || 0,
+        cavities: Number(cavities) || machine?.cavities || 1,
+        idealCycleSeconds: Number(idealCycleSeconds) || machine?.idealCycleSeconds || 0,
+        plannedMinutes: Number(plannedMinutes) || 0,
+      }),
+    [goodQty, scrapQty, cavities, idealCycleSeconds, plannedMinutes, machine],
+  );
 
   const preview = useMemo(() => {
     const temp: ProductionRecord = {
@@ -179,14 +203,14 @@ export function ProductionDaily() {
       productSku: product?.sku ?? '',
       productName: product?.name ?? '',
       orderId: orderId || undefined,
-      plannedQty: Number(plannedQty) || 0,
+      plannedQty: targets.plannedQty,
       goodQty: Number(goodQty) || 0,
       scrapQty: Number(scrapQty) || 0,
-      shots: Number(shots) || 0,
-      cavities: Number(cavities) || 1,
+      shots: targets.shots,
+      cavities: targets.cavities,
       plannedMinutes: Number(plannedMinutes) || 0,
       downtimeMinutes: Number(downtimeMinutes) || 0,
-      idealCycleSeconds: Number(idealCycleSeconds) || 0,
+      idealCycleSeconds: targets.idealCycleSeconds,
       scrapReason,
       notes,
       status: 'abierto',
@@ -197,14 +221,13 @@ export function ProductionDaily() {
     };
     return recordMetrics(temp);
   }, [
-    date, shift, machine, product, productId, orderId, plannedQty, goodQty, scrapQty, shots, cavities,
-    plannedMinutes, downtimeMinutes, idealCycleSeconds, scrapReason, notes, machineId,
+    date, shift, machine, product, productId, orderId, targets, goodQty, scrapQty,
+    plannedMinutes, downtimeMinutes, scrapReason, notes, machineId,
   ]);
 
   const resetQty = () => {
     setGoodQty('');
     setScrapQty('');
-    setShots('');
     setDowntimeMinutes('0');
     setNotes('');
   };
@@ -228,10 +251,8 @@ export function ProductionDaily() {
           machineId: machine.id,
           productId: product.id,
           orderId: orderId || undefined,
-          plannedQty: Number(plannedQty) || 0,
           goodQty: Number(goodQty) || 0,
           scrapQty: Number(scrapQty) || 0,
-          shots: Number(shots) || 0,
           cavities: Number(cavities) || 1,
           plannedMinutes: Number(plannedMinutes) || 0,
           downtimeMinutes: Number(downtimeMinutes) || 0,
@@ -318,7 +339,7 @@ export function ProductionDaily() {
 
       <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1.55fr) minmax(290px, 1fr)' }}>
         <Card>
-          <CardHead title="Captura rápida" subtitle="Toque el turno y la máquina; luego registre golpes y piezas" icon={<Factory size={18} color="var(--brand-3)" />} />
+          <CardHead title="Captura rápida" subtitle="Toque el turno y la máquina; luego registre las piezas conformes y el scrap" icon={<Factory size={18} color="var(--brand-3)" />} />
           <div className="card-pad form-grid">
             <div>
               <div className="meta-label" style={{ marginBottom: 8 }}>Turno</div>
@@ -385,15 +406,6 @@ export function ProductionDaily() {
             </div>
 
             <div className="field-row">
-              <Field label="Piezas programadas">
-                <NumberStepper value={plannedQty} onChange={setPlannedQty} step={100} min={0} suffix="und" />
-              </Field>
-              <Field label="Golpes / inyecciones">
-                <NumberStepper value={shots} onChange={setShots} step={10} min={0} suffix="golpes" />
-              </Field>
-            </div>
-
-            <div className="field-row">
               <Field label="Piezas conformes" hint="Entran al inventario al validar el turno">
                 <NumberStepper value={goodQty} onChange={setGoodQty} step={10} min={0} suffix="und" />
               </Field>
@@ -403,7 +415,7 @@ export function ProductionDaily() {
             </div>
 
             <div className="field-row-3">
-              <Field label="Minutos planificados">
+              <Field label="Duración del turno (min)" hint="Se toma de la configuración del turno.">
                 <Input type="number" min={0} value={plannedMinutes} onChange={(e) => setPlannedMinutes(e.target.value)} />
               </Field>
               <Field label="Minutos de paro">
@@ -415,7 +427,7 @@ export function ProductionDaily() {
             </div>
 
             <div className="field-row">
-              <Field label="Ciclo ideal (segundos por golpe)">
+              <Field label="Ciclo ideal (segundos)">
                 <Input type="number" min={0} step="0.1" value={idealCycleSeconds} onChange={(e) => setIdealCycleSeconds(e.target.value)} />
               </Field>
               <Field label="Motivo principal del scrap">
@@ -472,10 +484,6 @@ export function ProductionDaily() {
               <div className="row-between small muted">
                 <span>Scrap del turno</span>
                 <span className="bold" style={{ color: preview.scrapPct <= 3 ? 'var(--ok)' : 'var(--danger)' }}>{pct(preview.scrapPct)}</span>
-              </div>
-              <div className="row-between small muted">
-                <span>Piezas por golpe</span>
-                <span>{preview.piecesPerShot || '—'}</span>
               </div>
               <div className="row-between small muted">
                 <span>Tiempo efectivo</span>
