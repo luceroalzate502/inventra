@@ -59,6 +59,8 @@ const TABLES = [
   'locationStock',
   'transfers',
   'dispatches',
+  'messages',
+  'permissions',
 ] as const;
 
 interface SettingsForm {

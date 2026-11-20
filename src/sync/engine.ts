@@ -49,6 +49,7 @@ export const SYNC_TABLES = [
   'transfers',
   'dispatches',
   'messages',
+  'permissions',
 ] as const;
 
 type SyncTable = (typeof SYNC_TABLES)[number];
@@ -313,7 +314,8 @@ export async function reconcileLocalRecords(force = false): Promise<void> {
     const missing: SyncMeta[] = [];
 
     for (const row of rows) {
-      const id = String(row.id ?? row.key ?? '');
+      // La tabla de autorizaciones usa `role` como clave primaria.
+      const id = String(row.id ?? row.key ?? (name === 'permissions' ? row.role : '') ?? '');
       if (!id) continue;
       seen.add(id);
       const current = metaById.get(id);

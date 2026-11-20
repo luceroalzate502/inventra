@@ -21,7 +21,15 @@ export type Permission =
   | 'settings.manage'
   | 'audit.view';
 
-const ALL: Permission[] = [
+/** Autorización guardada por el administrador para un rol. */
+export interface RolePermission {
+  role: Role;
+  grants: Partial<Record<Permission, boolean>>;
+}
+
+type PermissionMap = Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
+
+export const ALL_PERMISSIONS: Permission[] = [
   'products.edit',
   'inventory.entry',
   'inventory.exit',
@@ -42,6 +50,13 @@ const ALL: Permission[] = [
   'settings.manage',
   'audit.view',
 ];
+
+const ALL_PERMISSION_SET = new Set<string>(ALL_PERMISSIONS);
+
+/** Verifica que un valor leído de la base corresponda a una función conocida. */
+export function isPermission(value: string): value is Permission {
+  return ALL_PERMISSION_SET.has(value);
+}
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
   'products.edit': 'Crear y editar productos',
@@ -89,7 +104,7 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
 ];
 
 const MATRIX: Record<Role, Permission[]> = {
-  admin: ALL,
+  admin: ALL_PERMISSIONS,
   jefe: [
     'products.edit',
     'inventory.entry',
@@ -131,7 +146,41 @@ const MATRIX: Record<Role, Permission[]> = {
   consulta: ['reports.view'],
 };
 
+/*
+ * Autorizaciones configuradas por el administrador. Se mantienen en memoria
+ * para que todas las pantallas usen la misma regla; `usePermissionSync` las
+ * recarga desde IndexedDB y fuerza un redibujado cuando cambian.
+ */
+let overrides: PermissionMap = {};
+
+/** Reemplaza las autorizaciones manuales con las filas guardadas en la base. */
+export function setPermissionOverrides(rows: RolePermission[]): void {
+  const next: PermissionMap = {};
+  for (const row of rows) {
+    if (!row?.role) continue;
+    const grants: Partial<Record<Permission, boolean>> = {};
+    for (const [key, value] of Object.entries(row.grants ?? {})) {
+      if (isPermission(key) && typeof value === 'boolean') grants[key] = value;
+    }
+    next[row.role] = grants;
+  }
+  overrides = next;
+}
+
+/**
+ * El administrador siempre conserva estas dos funciones para poder corregir
+ * los permisos que él mismo haya cambiado.
+ */
+const ADMIN_LOCKED: Permission[] = ['users.manage', 'settings.manage'];
+
+export function isPermissionLocked(role: Role, permission: Permission): boolean {
+  return role === 'admin' && ADMIN_LOCKED.includes(permission);
+}
+
 export function can(role: Role, permission: Permission): boolean {
+  if (isPermissionLocked(role, permission)) return true;
+  const explicit = overrides[role]?.[permission];
+  if (typeof explicit === 'boolean') return explicit;
   return MATRIX[role]?.includes(permission) ?? false;
 }
 

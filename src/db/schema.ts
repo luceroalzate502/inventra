@@ -1,6 +1,7 @@
 import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import { deviceSuffix, isCloudConfigured } from '../sync/config';
+import type { RolePermission } from '../domain/permissions';
 import type {
   AuditEntry,
   Bom,
@@ -48,6 +49,7 @@ export class InvencodiDB extends Dexie {
   transfers!: Table<Transfer, string>;
   dispatches!: Table<Dispatch, string>;
   messages!: Table<ChatMessage, string>;
+  permissions!: Table<RolePermission, string>;
   syncMeta!: Table<SyncMeta, string>;
 
   constructor() {
@@ -87,6 +89,11 @@ export class InvencodiDB extends Dexie {
     // v4: chat interno entre roles (una sola sala general).
     this.version(4).stores({
       messages: 'id, createdAt, authorId',
+    });
+
+    // v5: autorizaciones de funciones por rol, configuradas por el administrador.
+    this.version(5).stores({
+      permissions: 'role',
     });
   }
 }

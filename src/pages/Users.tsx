@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Check,
@@ -7,6 +7,8 @@ import {
   Pencil,
   Power,
   PowerOff,
+  RotateCcw,
+  Save,
   ShieldCheck,
   UserPlus,
   Users as UsersIcon,
@@ -16,7 +18,16 @@ import { db } from '../db/schema';
 import { useApp } from '../context/AppContext';
 import { hashPin } from '../domain/auth';
 import { dateTime, initials, uid } from '../domain/format';
-import { can, PERMISSION_GROUPS, PERMISSION_LABELS } from '../domain/permissions';
+import {
+  ALL_PERMISSIONS,
+  can,
+  isPermission,
+  isPermissionLocked,
+  PERMISSION_GROUPS,
+  PERMISSION_LABELS,
+  permissionsOf,
+} from '../domain/permissions';
+import type { Permission, RolePermission } from '../domain/permissions';
 import { ROLES } from '../domain/types';
 import type { Role, User } from '../domain/types';
 import {
@@ -34,6 +45,7 @@ import {
   SearchInput,
   Select,
   StatCard,
+  cx,
 } from '../components/ui';
 
 const ROLE_ORDER: Role[] = ['admin', 'jefe', 'almacenista', 'produccion', 'consulta'];
@@ -45,6 +57,28 @@ const ROLE_TONE: Record<Role, 'brand' | 'info' | 'ok' | 'warn' | 'muted'> = {
   produccion: 'warn',
   consulta: 'muted',
 };
+
+type Matrix = Record<Role, Partial<Record<Permission, boolean>>>;
+
+const EMPTY_RULES: RolePermission[] = [];
+
+/** Combina los permisos originales de cada rol con las autorizaciones guardadas. */
+function buildMatrix(rules: RolePermission[]): Matrix {
+  const out = {} as Matrix;
+  for (const role of ROLE_ORDER) {
+    const defaults = new Set(permissionsOf(role));
+    const row: Partial<Record<Permission, boolean>> = {};
+    for (const perm of ALL_PERMISSIONS) row[perm] = isPermissionLocked(role, perm) || defaults.has(perm);
+    const saved = rules.find((r) => r.role === role);
+    if (saved) {
+      for (const [key, value] of Object.entries(saved.grants ?? {})) {
+        if (isPermission(key) && typeof value === 'boolean') row[key] = value;
+      }
+    }
+    out[role] = row;
+  }
+  return out;
+}
 
 interface UserForm {
   name: string;
@@ -80,6 +114,15 @@ export function Users() {
   const [resetPin, setResetPin] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
   const [toggleTarget, setToggleTarget] = useState<User | null>(null);
+  const rules = useLiveQuery(() => db.permissions.toArray(), []) ?? EMPTY_RULES;
+  const [matrix, setMatrix] = useState<Matrix>(() => buildMatrix(EMPTY_RULES));
+  const [matrixDirty, setMatrixDirty] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+
+  useEffect(() => {
+    setMatrix(buildMatrix(rules));
+    setMatrixDirty(false);
+  }, [rules]);
 
   const canManage = user ? can(user.role, 'users.manage') : false;
 
@@ -292,6 +335,78 @@ export function Users() {
     }
   };
 
+  const togglePermission = (role: Role, perm: Permission) => {
+    if (isPermissionLocked(role, perm)) return;
+    setMatrix((prev) => ({
+      ...prev,
+      [role]: { ...prev[role], [perm]: !prev[role][perm] },
+    }));
+    setMatrixDirty(true);
+  };
+
+  const saveMatrix = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const before = await db.permissions.toArray();
+      const records: RolePermission[] = ROLE_ORDER.map((role) => ({
+        role,
+        grants: { ...matrix[role] },
+      }));
+      // `put` activa los hooks de sincronización; `bulkPut` no los ejecuta.
+      for (const record of records) await db.permissions.put(record);
+      await db.audit.add({
+        id: uid(),
+        entity: 'permissions',
+        entityId: 'global',
+        action: 'actualizar',
+        summary: 'Autorizaciones de funciones actualizadas manualmente',
+        before,
+        after: records,
+        userId: user.id,
+        userName: user.name,
+        at: new Date().toISOString(),
+      });
+      toast(
+        'Permisos guardados',
+        'success',
+        'Los cambios aplican de inmediato a todos los usuarios de cada rol.',
+      );
+    } catch (err) {
+      toast('No fue posible guardar', 'error', err instanceof Error ? err.message : 'Intente nuevamente.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetMatrix = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const before = await db.permissions.toArray();
+      // Borrar uno por uno activa el hook que marca cada rol como eliminado en la nube.
+      for (const row of before) await db.permissions.delete(row.role);
+      await db.audit.add({
+        id: uid(),
+        entity: 'permissions',
+        entityId: 'global',
+        action: 'revertir',
+        summary: 'Autorizaciones de funciones restablecidas a los valores originales',
+        before,
+        after: [],
+        userId: user.id,
+        userName: user.name,
+        at: new Date().toISOString(),
+      });
+      setResetOpen(false);
+      toast('Permisos restablecidos', 'success', 'Cada rol volvió a sus funciones originales.');
+    } catch (err) {
+      toast('No fue posible restablecer', 'error', err instanceof Error ? err.message : 'Intente nuevamente.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!canManage) {
     return (
       <Card>
@@ -445,9 +560,32 @@ export function Users() {
 
       <Card>
         <CardHead
-          title="Matriz de permisos"
-          subtitle="Capacidades asignadas a cada rol. Los cambios de perfil aplican de inmediato."
+          title="Autorización de funciones"
+          subtitle="Haga clic en cada celda para autorizar o denegar una función por rol."
           icon={<ShieldCheck size={18} color="var(--brand-3)" />}
+          actions={
+            <>
+              {matrixDirty && <Badge tone="warn" dot>Sin guardar</Badge>}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<RotateCcw size={14} />}
+                onClick={() => setResetOpen(true)}
+                disabled={busy || rules.length === 0}
+              >
+                Restablecer
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Save size={14} />}
+                onClick={() => void saveMatrix()}
+                disabled={busy || !matrixDirty}
+              >
+                Guardar permisos
+              </Button>
+            </>
+          }
         />
         <div className="table-wrap">
           <table className="data">
@@ -474,15 +612,31 @@ export function Users() {
                   {group.permissions.map((perm) => (
                     <tr key={perm}>
                       <td>{PERMISSION_LABELS[perm]}</td>
-                      {ROLE_ORDER.map((r) => (
-                        <td key={r} className="center">
-                          {can(r, perm) ? (
-                            <Check size={16} color="var(--ok)" style={{ display: 'inline' }} />
-                          ) : (
-                            <X size={15} color="var(--faint)" style={{ display: 'inline', opacity: 0.5 }} />
-                          )}
-                        </td>
-                      ))}
+                      {ROLE_ORDER.map((r) => {
+                        const granted = Boolean(matrix[r][perm]);
+                        const locked = isPermissionLocked(r, perm);
+                        return (
+                          <td key={r} className="center">
+                            <button
+                              type="button"
+                              className={cx('perm-toggle', granted && 'on')}
+                              aria-pressed={granted}
+                              aria-label={`${ROLES[r].label}: ${PERMISSION_LABELS[perm]}`}
+                              title={
+                                locked
+                                  ? 'Función protegida: el administrador siempre debe poder administrar usuarios y configuración.'
+                                  : granted
+                                    ? 'Autorizada. Haga clic para denegar.'
+                                    : 'Denegada. Haga clic para autorizar.'
+                              }
+                              disabled={locked || busy}
+                              onClick={() => togglePermission(r, perm)}
+                            >
+                              {granted ? <Check size={16} /> : <X size={15} />}
+                            </button>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </Fragment>
@@ -636,6 +790,17 @@ export function Users() {
         busy={busy}
         onCancel={() => setToggleTarget(null)}
         onConfirm={toggleActive}
+      />
+
+      <ConfirmDialog
+        open={resetOpen}
+        title="Restablecer autorizaciones"
+        message="Todas las funciones volverán a la configuración original de cada rol. Esta acción se registra en la auditoría."
+        confirmLabel="Restablecer"
+        tone="danger"
+        busy={busy}
+        onCancel={() => setResetOpen(false)}
+        onConfirm={() => void resetMatrix()}
       />
     </>
   );

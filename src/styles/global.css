@@ -908,6 +908,57 @@ table.data .strong {
   flex-wrap: wrap;
 }
 
+.perm-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  color: var(--faint);
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.1s ease;
+}
+
+.perm-toggle:hover:not(:disabled) {
+  border-color: var(--brand-2);
+  background: var(--brand-soft);
+  color: var(--brand-3);
+}
+
+.perm-toggle:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.perm-toggle.on {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.perm-toggle.on:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.perm-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.perm-toggle:focus-visible {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
 /* ============================================================
    Formularios
    ============================================================ */

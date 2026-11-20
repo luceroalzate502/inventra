@@ -5,6 +5,7 @@ import { ShieldAlert } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { Toaster, Card, EmptyState } from './components/ui';
 import { useApp } from './context/AppContext';
+import { usePermissionSync } from './hooks/usePermissionSync';
 import { can } from './domain/permissions';
 import type { Permission } from './domain/permissions';
 import { Login } from './pages/Login';
@@ -77,6 +78,8 @@ const guard = (perm: Permission, element: ReactNode) => (
 );
 
 export function App() {
+  usePermissionSync();
+
   // En GitHub Pages la app vive en /<repositorio>/; el router debe ignorar esa base.
   const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 
